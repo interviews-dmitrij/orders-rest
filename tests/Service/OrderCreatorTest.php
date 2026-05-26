@@ -15,7 +15,6 @@ final class OrderCreatorTest extends TestCase
 {
     public function testCreatesAndPersistsOrderWithSingleProduct(): void
     {
-        // Arrange
         $repository = new InMemoryOrderRepository();
         $creator = new OrderCreator($repository);
         $request = new CreateOrderRequest(
@@ -32,21 +31,19 @@ final class OrderCreatorTest extends TestCase
             ],
         );
 
-        // Act
         $order = $creator->create('PARTNER_A', $request);
 
-        // Assert
         self::assertSame('PARTNER_A', $order->partnerId);
         self::assertSame('ORD-2026-00001', $order->orderId);
         self::assertSame('2026-06-15', $order->expectedDeliveryDate->format('Y-m-d'));
         self::assertSame('499.00', (string) $order->totalValue);
         self::assertCount(1, $order->products);
         self::assertSame($order, $repository->findByCompositeKey('PARTNER_A', 'ORD-2026-00001'));
+        self::assertSame($order->createdAt, $order->updatedAt);
     }
 
     public function testCreatesOrderWithMultipleProductsLinkedBackToTheOrder(): void
     {
-        // Arrange
         $creator = new OrderCreator(new InMemoryOrderRepository());
         $request = new CreateOrderRequest(
             orderId: 'ORD-2026-00002',
@@ -59,25 +56,28 @@ final class OrderCreatorTest extends TestCase
             ],
         );
 
-        // Act
         $order = $creator->create('PARTNER_B', $request);
 
-        // Assert
         self::assertCount(3, $order->products);
         $skus = [];
+        $names = [];
+        $quantities = [];
         $prices = [];
         foreach ($order->products as $product) {
             self::assertSame($order, $product->order, 'each child product points back to its parent order');
             $skus[] = $product->productId;
+            $names[] = $product->name;
+            $quantities[] = $product->quantity;
             $prices[] = (string) $product->price;
         }
         self::assertSame(['SKU-001', 'SKU-002', 'SKU-003'], $skus);
+        self::assertSame(['Bluetooth Headphones', 'USB-C Cable, 2 m', 'Phone Stand'], $names);
+        self::assertSame([2, 4, 1], $quantities);
         self::assertSame(['129.99', '9.99', '49.99'], $prices);
     }
 
     public function testRejectsDuplicateCompositeKey(): void
     {
-        // Arrange
         $creator = new OrderCreator(new InMemoryOrderRepository());
         $request = new CreateOrderRequest(
             orderId: 'ORD-DUP',
@@ -87,10 +87,25 @@ final class OrderCreatorTest extends TestCase
         );
         $creator->create('PARTNER_A', $request);
 
-        // Assert
         $this->expectException(DuplicateOrderException::class);
-
-        // Act
         $creator->create('PARTNER_A', $request);
+    }
+
+    public function testNormalizesTotalAndPriceToScaleTwo(): void
+    {
+        $creator = new OrderCreator(new InMemoryOrderRepository());
+        $request = new CreateOrderRequest(
+            orderId: 'ORD-SCALE',
+            expectedDeliveryDate: '2026-06-15',
+            totalValue: '499',
+            products: [new CreateOrderProductRequest('SKU-1', 'Item', '9.9', 1)],
+        );
+
+        $order = $creator->create('PARTNER_A', $request);
+
+        $product = $order->products->first();
+        self::assertNotFalse($product);
+        self::assertSame('499.00', (string) $order->totalValue);
+        self::assertSame('9.90', (string) $product->price);
     }
 }
