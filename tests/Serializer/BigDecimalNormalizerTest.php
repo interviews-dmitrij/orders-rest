@@ -21,89 +21,83 @@ final class BigDecimalNormalizerTest extends TestCase
     }
 
     /**
+     * Regression guard for the wire-format contract: the normalizer must not pad scale-zero
+     * values to scale 2, strip trailing zeros, or coerce negatives — the original `MONEY_SCALE`
+     * implementation did all of these and the bug was invisible because every test happened
+     * to use scale-2 inputs already.
+     *
      * @return iterable<string, array{0: string, 1: string}>
      */
-    public static function normalizationRoundtrip(): iterable
+    public static function scalePreservingPayloads(): iterable
     {
-        yield 'two fractional digits' => ['1299.99', '1299.99'];
-        yield 'no fractional digits preserved as scale zero' => ['499', '499'];
-        yield 'single fractional digit preserved' => ['1.5', '1.5'];
-        yield 'four fractional digits preserved' => ['0.0001', '0.0001'];
-        yield 'negative value preserved' => ['-5.50', '-5.50'];
+        yield 'scale zero stays scale zero' => ['499', '499'];
+        yield 'scale two preserved as is' => ['1299.99', '1299.99'];
+        yield 'scale five preserved' => ['10.51119', '10.51119'];
+        yield 'negative scale two preserved' => ['-5.50', '-5.50'];
     }
 
-    #[DataProvider('normalizationRoundtrip')]
-    public function testNormalizePreservesNativeScale(string $input, string $expected): void
+    #[DataProvider('scalePreservingPayloads')]
+    public function testNormalizeEmitsBigDecimalAtItsNativeScale(string $input, string $expected): void
     {
         $result = $this->normalizer->normalize(BigDecimal::of($input));
 
         self::assertSame($expected, $result);
     }
 
-    public function testSupportsNormalizationForBigDecimal(): void
-    {
-        self::assertTrue($this->normalizer->supportsNormalization(BigDecimal::of('1')));
-        self::assertFalse($this->normalizer->supportsNormalization('1'));
-        self::assertFalse($this->normalizer->supportsNormalization(new stdClass()));
-    }
-
-    /**
-     * @return iterable<string, array{0: string|int, 1: string}>
-     */
-    public static function denormalizationRoundtrip(): iterable
-    {
-        yield 'numeric string two fractional digits' => ['1299.99', '1299.99'];
-        yield 'numeric string four fractional digits' => ['0.1234', '0.1234'];
-        yield 'numeric string no fractional digits' => ['499', '499'];
-        yield 'php integer' => [499, '499'];
-        yield 'negative decimal string' => ['-5.50', '-5.50'];
-    }
-
-    #[DataProvider('denormalizationRoundtrip')]
-    public function testDenormalizePreservesNativeScale(string|int $input, string $expected): void
+    #[DataProvider('scalePreservingPayloads')]
+    public function testDenormalizeReturnsBigDecimalAtItsNativeScale(string $input, string $expected): void
     {
         $result = $this->normalizer->denormalize($input, BigDecimal::class);
 
         self::assertSame($expected, (string) $result);
     }
 
-    public function testDenormalizationThrowsOnMalformedString(): void
+    /**
+     * PostgreSQL drivers and Symfony's JSON decoder return whole-number wire payloads as PHP
+     * integers, not strings, so the denormalizer must accept both. Anything else (float, bool,
+     * array, null) is out of the wire contract and must surface as a 422-mappable failure.
+     */
+    public function testDenormalizeAcceptsPhpInteger(): void
     {
-        $this->expectException(NotNormalizableValueException::class);
-        $this->normalizer->denormalize('not-a-decimal', BigDecimal::class);
+        $result = $this->normalizer->denormalize(499, BigDecimal::class);
+
+        self::assertSame('499', (string) $result);
     }
 
     /**
-     * @return iterable<string, array{0: mixed, 1: string}>
+     * @return iterable<string, array{0: mixed}>
      */
-    public static function rejectedInputsWithExpectedMessage(): iterable
+    public static function nonNumericInputs(): iterable
     {
-        yield 'array input' => [['nested' => 'object'], 'numeric string or integer'];
-        yield 'float input' => [1.5, 'numeric string or integer'];
-        yield 'boolean input' => [true, 'numeric string or integer'];
-        yield 'null input' => [null, 'numeric string or integer'];
+        yield 'float — out of wire contract (totalValue declared as string)' => [1.5];
+        yield 'boolean' => [true];
+        yield 'array' => [['nested' => 'object']];
+        yield 'null' => [null];
     }
 
-    #[DataProvider('rejectedInputsWithExpectedMessage')]
-    public function testDenormalizationRejectsInputWithExpectedMessage(mixed $input, string $messageFragment): void
+    #[DataProvider('nonNumericInputs')]
+    public function testDenormalizeRejectsNonStringIntegerInputs(mixed $input): void
     {
         $this->expectException(NotNormalizableValueException::class);
-        $this->expectExceptionMessage($messageFragment);
+        $this->expectExceptionMessage('numeric string or integer');
 
         $this->normalizer->denormalize($input, BigDecimal::class);
     }
 
-    public function testSupportsDenormalizationForBigDecimal(): void
+    public function testDenormalizeRejectsMalformedNumericString(): void
     {
-        self::assertTrue($this->normalizer->supportsDenormalization('1.99', BigDecimal::class));
-        self::assertFalse($this->normalizer->supportsDenormalization('1.99', stdClass::class));
+        $this->expectException(NotNormalizableValueException::class);
+
+        $this->normalizer->denormalize('not-a-decimal', BigDecimal::class);
     }
 
-    public function testGetSupportedTypesAdvertisesBigDecimal(): void
+    public function testAdvertisesBigDecimalToSerializerChain(): void
     {
-        self::assertSame(
-            [BigDecimal::class => true],
-            $this->normalizer->getSupportedTypes(null),
-        );
+        self::assertTrue($this->normalizer->supportsNormalization(BigDecimal::of('1')));
+        self::assertFalse($this->normalizer->supportsNormalization('1'));
+        self::assertFalse($this->normalizer->supportsNormalization(new stdClass()));
+        self::assertTrue($this->normalizer->supportsDenormalization('1.99', BigDecimal::class));
+        self::assertFalse($this->normalizer->supportsDenormalization('1.99', stdClass::class));
+        self::assertSame([BigDecimal::class => true], $this->normalizer->getSupportedTypes(null));
     }
 }

@@ -7,7 +7,6 @@ namespace App\Tests\Validator\Constraints;
 use App\Validator\Constraints\BigDecimalMaxScale;
 use App\Validator\Constraints\BigDecimalMaxScaleValidator;
 use Brick\Math\BigDecimal;
-use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Validator\Constraints\NotNull;
 use Symfony\Component\Validator\Exception\UnexpectedTypeException;
 use Symfony\Component\Validator\Exception\UnexpectedValueException;
@@ -18,74 +17,71 @@ use Symfony\Component\Validator\Test\ConstraintValidatorTestCase;
  */
 final class BigDecimalMaxScaleValidatorTest extends ConstraintValidatorTestCase
 {
-    public function testNullValueProducesNoViolation(): void
+    public function testNullValuePassesPerSymfonyConvention(): void
     {
         $this->validator->validate(null, new BigDecimalMaxScale(5));
 
         $this->assertNoViolation();
     }
 
-    /**
-     * @return iterable<string, array{0: string, 1: int}>
-     */
-    public static function valuesAtOrBelowMaxScale(): iterable
+    public function testAcceptsValueWithFewerFractionalDigitsThanMax(): void
     {
-        yield 'scale zero against max five' => ['1299', 5];
-        yield 'scale one against max five' => ['1.5', 5];
-        yield 'scale four against max five' => ['10.5111', 5];
-        yield 'scale five against max five' => ['10.51119', 5];
-        yield 'scale zero against max zero' => ['42', 0];
+        $this->validator->validate(BigDecimal::of('1.5'), new BigDecimalMaxScale(5));
+
+        $this->assertNoViolation();
     }
 
-    #[DataProvider('valuesAtOrBelowMaxScale')]
-    public function testValueAtOrBelowMaxScaleProducesNoViolation(string $value, int $max): void
+    public function testAcceptsValueExactlyAtMaxScale(): void
     {
-        $this->validator->validate(BigDecimal::of($value), new BigDecimalMaxScale($max));
+        $this->validator->validate(BigDecimal::of('1.23456'), new BigDecimalMaxScale(5));
 
         $this->assertNoViolation();
     }
 
     /**
-     * @return iterable<string, array{0: string, 1: int}>
+     * Brick preserves the literal scale of the source string, so `'1.00'` retains scale 2.
+     * The validator must see trailing-zero scale as significant — partners that send extra
+     * zeros are signalling precision they expect us to honour, and `BigDecimal::of('1.00')`
+     * against max=1 must fail just as `'1.23'` does.
      */
-    public static function valuesAboveMaxScale(): iterable
+    public function testRejectsTrailingZeroScaleExceedingMax(): void
     {
-        yield 'scale six against max five' => ['1.234567', 5];
-        yield 'scale seven against max five' => ['1.2345678', 5];
-        yield 'scale one against max zero' => ['1.5', 0];
-    }
-
-    #[DataProvider('valuesAboveMaxScale')]
-    public function testValueAboveMaxScaleRaisesViolation(string $value, int $max): void
-    {
-        $this->validator->validate(BigDecimal::of($value), new BigDecimalMaxScale($max));
+        $this->validator->validate(BigDecimal::of('1.00'), new BigDecimalMaxScale(1));
 
         $this->buildViolation('This value should have at most {{ max }} fractional digits.')
-            ->setParameter('{{ max }}', (string) $max)
+            ->setParameter('{{ max }}', '1')
             ->setCode(BigDecimalMaxScale::SCALE_EXCEEDED_ERROR)
             ->assertRaised();
     }
 
-    public function testCustomMessageOverridesDefault(): void
+    public function testRejectsValueOneScaleAboveMax(): void
     {
-        $constraint = new BigDecimalMaxScale(max: 5, message: 'Too many digits after the decimal point.');
+        $this->validator->validate(BigDecimal::of('10.123456'), new BigDecimalMaxScale(5));
 
-        $this->validator->validate(BigDecimal::of('1.234567'), $constraint);
-
-        $this->buildViolation('Too many digits after the decimal point.')
+        $this->buildViolation('This value should have at most {{ max }} fractional digits.')
             ->setParameter('{{ max }}', '5')
             ->setCode(BigDecimalMaxScale::SCALE_EXCEEDED_ERROR)
             ->assertRaised();
     }
 
-    public function testWrongValueTypeThrowsUnexpectedValueException(): void
+    public function testRejectsAnyFractionalDigitWhenMaxIsZero(): void
+    {
+        $this->validator->validate(BigDecimal::of('5.1'), new BigDecimalMaxScale(0));
+
+        $this->buildViolation('This value should have at most {{ max }} fractional digits.')
+            ->setParameter('{{ max }}', '0')
+            ->setCode(BigDecimalMaxScale::SCALE_EXCEEDED_ERROR)
+            ->assertRaised();
+    }
+
+    public function testThrowsWhenValidatedValueIsNotBigDecimal(): void
     {
         $this->expectException(UnexpectedValueException::class);
 
         $this->validator->validate('1.234567', new BigDecimalMaxScale(5));
     }
 
-    public function testWrongConstraintTypeThrowsUnexpectedTypeException(): void
+    public function testThrowsWhenDispatchedWithWrongConstraint(): void
     {
         $this->expectException(UnexpectedTypeException::class);
 

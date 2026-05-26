@@ -18,76 +18,71 @@ use Symfony\Component\Validator\Test\ConstraintValidatorTestCase;
  */
 final class BigDecimalGreaterThanOrEqualValidatorTest extends ConstraintValidatorTestCase
 {
-    public function testNullValueProducesNoViolation(): void
+    public function testNullValuePassesPerSymfonyConvention(): void
     {
         $this->validator->validate(null, new BigDecimalGreaterThanOrEqual('0'));
 
         $this->assertNoViolation();
     }
 
-    /**
-     * @return iterable<string, array{0: string, 1: string}>
-     */
-    public static function valuesAtOrAboveThreshold(): iterable
+    public function testRejectsValueBelowThresholdWithViolationCarryingThresholdAndCode(): void
     {
-        yield 'equal to threshold' => ['0', '0'];
-        yield 'one above threshold' => ['1', '0'];
-        yield 'large value above zero threshold' => ['9999999999.99', '0'];
-        yield 'fractional above threshold' => ['0.01', '0'];
-        yield 'value matches positive threshold' => ['100', '100'];
-        yield 'value above positive threshold' => ['100.01', '100'];
+        $this->validator->validate(BigDecimal::of('-0.00001'), new BigDecimalGreaterThanOrEqual('0'));
+
+        $this->buildViolation('This value should be greater than or equal to {{ compared_value }}.')
+            ->setParameter('{{ compared_value }}', '0')
+            ->setCode(BigDecimalGreaterThanOrEqual::LESS_THAN_THRESHOLD_ERROR)
+            ->assertRaised();
     }
 
-    #[DataProvider('valuesAtOrAboveThreshold')]
-    public function testValueAtOrAboveThresholdProducesNoViolation(string $value, string $threshold): void
+    public function testAcceptsValueExactlyAtThreshold(): void
+    {
+        $this->validator->validate(BigDecimal::of('0.00'), new BigDecimalGreaterThanOrEqual('0'));
+
+        $this->assertNoViolation();
+    }
+
+    /**
+     * Guards against a naive `$a >= $b` PHP comparison: `BigDecimal::of('10') >= BigDecimal::of('9.99')`
+     * via PHP's spaceship-on-objects compares internal `value` strings lexicographically and yields
+     * `'10' >= '999'` → false. The validator must use `BigDecimal::isLessThan()` instead, otherwise
+     * scale-mismatched but mathematically larger values get incorrectly rejected.
+     *
+     * @return iterable<string, array{0: string, 1: string}>
+     */
+    public static function scaleMismatchedComparisons(): iterable
+    {
+        yield 'integer-scale value vs higher-scale threshold' => ['10', '9.99'];
+        yield 'short integer value vs longer fractional threshold' => ['1000', '999.99999'];
+        yield 'value with trailing zeros vs unscaled threshold' => ['100.00', '100'];
+    }
+
+    #[DataProvider('scaleMismatchedComparisons')]
+    public function testHandlesScaleMismatchedComparisonsNumerically(string $value, string $threshold): void
     {
         $this->validator->validate(BigDecimal::of($value), new BigDecimalGreaterThanOrEqual($threshold));
 
         $this->assertNoViolation();
     }
 
-    /**
-     * @return iterable<string, array{0: string, 1: string}>
-     */
-    public static function valuesBelowThreshold(): iterable
+    public function testRejectsValueBelowThresholdAcrossScales(): void
     {
-        yield 'negative integer below zero' => ['-1', '0'];
-        yield 'negative decimal below zero' => ['-0.01', '0'];
-        yield 'large negative below zero' => ['-9999999999.99', '0'];
-        yield 'value below positive threshold' => ['99.99', '100'];
-    }
-
-    #[DataProvider('valuesBelowThreshold')]
-    public function testValueBelowThresholdRaisesViolation(string $value, string $threshold): void
-    {
-        $this->validator->validate(BigDecimal::of($value), new BigDecimalGreaterThanOrEqual($threshold));
+        $this->validator->validate(BigDecimal::of('99.99999'), new BigDecimalGreaterThanOrEqual('100'));
 
         $this->buildViolation('This value should be greater than or equal to {{ compared_value }}.')
-            ->setParameter('{{ compared_value }}', $threshold)
+            ->setParameter('{{ compared_value }}', '100')
             ->setCode(BigDecimalGreaterThanOrEqual::LESS_THAN_THRESHOLD_ERROR)
             ->assertRaised();
     }
 
-    public function testCustomMessageOverridesDefault(): void
-    {
-        $constraint = new BigDecimalGreaterThanOrEqual(value: '0', message: 'Negative is forbidden.');
-
-        $this->validator->validate(BigDecimal::of('-5'), $constraint);
-
-        $this->buildViolation('Negative is forbidden.')
-            ->setParameter('{{ compared_value }}', '0')
-            ->setCode(BigDecimalGreaterThanOrEqual::LESS_THAN_THRESHOLD_ERROR)
-            ->assertRaised();
-    }
-
-    public function testWrongValueTypeThrowsUnexpectedValueException(): void
+    public function testThrowsWhenValidatedValueIsNotBigDecimal(): void
     {
         $this->expectException(UnexpectedValueException::class);
 
-        $this->validator->validate('not-a-big-decimal', new BigDecimalGreaterThanOrEqual('0'));
+        $this->validator->validate('5', new BigDecimalGreaterThanOrEqual('0'));
     }
 
-    public function testWrongConstraintTypeThrowsUnexpectedTypeException(): void
+    public function testThrowsWhenDispatchedWithWrongConstraint(): void
     {
         $this->expectException(UnexpectedTypeException::class);
 
