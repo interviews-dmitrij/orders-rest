@@ -213,8 +213,8 @@ components:
           examples: ["2026-06-15"]
         totalValue:
           type: string
-          description: Non-negative decimal string. Stored as sent — no rounding, no scale enforcement.
-          pattern: '^\d+(\.\d+)?$'
+          description: Non-negative decimal string, at most 5 fractional digits. Stored as sent — no rounding applied.
+          pattern: '^\d+(\.\d{1,5})?$'
           examples: ["1299.99", "499.00", "0.01"]
         products:
           type: array
@@ -256,7 +256,7 @@ components:
         price:
           type: string
           description: Per-unit price as a decimal string.
-          pattern: '^\d+(\.\d+)?$'
+          pattern: '^\d+(\.\d{1,5})?$'
           examples: ["129.99"]
         quantity:
           type: integer
@@ -281,7 +281,7 @@ components:
           examples: ["2026-06-15"]
         totalValue:
           type: string
-          pattern: '^\d+(\.\d+)?$'
+          pattern: '^\d+(\.\d{1,5})?$'
           examples: ["1299.99"]
         products:
           type: array
@@ -310,7 +310,7 @@ components:
           examples: ["Bluetooth Headphones"]
         price:
           type: string
-          pattern: '^\d+(\.\d+)?$'
+          pattern: '^\d+(\.\d{1,5})?$'
           examples: ["129.99"]
         quantity:
           type: integer
