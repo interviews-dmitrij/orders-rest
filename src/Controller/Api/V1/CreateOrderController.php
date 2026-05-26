@@ -22,6 +22,7 @@ final class CreateOrderController
     #[Route(
         path: '/api/v1/partners/{partnerId}/orders',
         name: 'create_order',
+        requirements: ['partnerId' => '[^/]{1,64}'],
         methods: ['POST'],
     )]
     public function __invoke(
@@ -34,15 +35,9 @@ final class CreateOrderController
     ): JsonResponse {
         $order = $this->creator->create($partnerId, $request);
 
-        $response = new JsonResponse(
+        return new JsonResponse(
             OrderResponse::fromEntity($order),
             Response::HTTP_CREATED,
         );
-        $response->headers->set(
-            'Location',
-            \sprintf('/api/v1/partners/%s/orders/%s', $partnerId, $order->orderId),
-        );
-
-        return $response;
     }
 }

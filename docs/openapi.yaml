@@ -69,16 +69,6 @@ paths:
       responses:
         '201':
           description: The order has been created.
-          headers:
-            Location:
-              description: URL of the created order.
-              required: true
-              schema:
-                type: string
-                format: uri-reference
-              examples:
-                typical:
-                  value: "/api/v1/partners/PARTNER_A/orders/ORD-2026-00001"
           content:
             application/json:
               schema:

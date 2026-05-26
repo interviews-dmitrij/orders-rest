@@ -141,7 +141,7 @@ final class ApiProblemExceptionListener
     {
         return match ($status) {
             400 => ['malformed-json', 'Malformed JSON'],
-            404 => ['order-not-found', 'Order Not Found'],
+            404 => ['not-found', 'Not Found'],
             405 => ['method-not-allowed', 'Method Not Allowed'],
             415 => ['unsupported-media-type', 'Unsupported Media Type'],
             422 => ['validation-failed', 'Validation Failed'],
