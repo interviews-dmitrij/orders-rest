@@ -39,7 +39,7 @@ final class OrderCreatorTest extends TestCase
         self::assertSame('PARTNER_A', $order->partnerId);
         self::assertSame('ORD-2026-00001', $order->orderId);
         self::assertSame('2026-06-15', $order->expectedDeliveryDate->format('Y-m-d'));
-        self::assertSame('499.00', $order->totalValue);
+        self::assertSame('499.00', (string) $order->totalValue);
         self::assertCount(1, $order->products);
         self::assertSame($order, $repository->findByCompositeKey('PARTNER_A', 'ORD-2026-00001'));
     }
@@ -65,11 +65,14 @@ final class OrderCreatorTest extends TestCase
         // Assert
         self::assertCount(3, $order->products);
         $skus = [];
+        $prices = [];
         foreach ($order->products as $product) {
             self::assertSame($order, $product->order, 'each child product points back to its parent order');
             $skus[] = $product->productId;
+            $prices[] = (string) $product->price;
         }
         self::assertSame(['SKU-001', 'SKU-002', 'SKU-003'], $skus);
+        self::assertSame(['129.99', '9.99', '49.99'], $prices);
     }
 
     public function testRejectsDuplicateCompositeKey(): void

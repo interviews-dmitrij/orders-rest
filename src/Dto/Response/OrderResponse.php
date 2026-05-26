@@ -34,7 +34,7 @@ final readonly class OrderResponse
             partnerId: $order->partnerId,
             orderId: $order->orderId,
             expectedDeliveryDate: $order->expectedDeliveryDate->format('Y-m-d'),
-            totalValue: $order->totalValue,
+            totalValue: (string) $order->totalValue,
             products: $products,
             createdAt: $order->createdAt->format(DateTimeInterface::RFC3339),
             updatedAt: $order->updatedAt->format(DateTimeInterface::RFC3339),

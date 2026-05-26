@@ -21,7 +21,7 @@ final readonly class OrderProductResponse
         return new self(
             productId: $product->productId,
             name: $product->name,
-            price: $product->price,
+            price: (string) $product->price,
             quantity: $product->quantity,
         );
     }

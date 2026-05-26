@@ -9,13 +9,14 @@ use App\Entity\Order;
 use App\Entity\OrderProduct;
 use App\Exception\DuplicateOrderException;
 use App\Repository\OrderRepositoryInterface;
+use Brick\Math\BigDecimal;
 use DateTimeImmutable;
 use LogicException;
 
 final class OrderCreator
 {
     public function __construct(
-        private readonly OrderRepositoryInterface $orders,
+        private readonly OrderRepositoryInterface $orderRepository,
     ) {
     }
 
@@ -32,26 +33,30 @@ final class OrderCreator
             ));
         }
 
+        $totalValue = BigDecimal::of($request->totalValue)->toScale(2);
+
         $order = new Order(
             partnerId: $partnerId,
             orderId: $request->orderId,
             expectedDeliveryDate: $expectedDeliveryDate,
-            totalValue: $request->totalValue,
+            totalValue: $totalValue,
             createdAt: new DateTimeImmutable(),
         );
 
         foreach ($request->products as $productRequest) {
+            $price = BigDecimal::of($productRequest->price)->toScale(2);
+
             $product = new OrderProduct(
                 order: $order,
                 productId: $productRequest->productId,
                 name: $productRequest->name,
-                price: $productRequest->price,
+                price: $price,
                 quantity: $productRequest->quantity,
             );
             $order->products->add($product);
         }
 
-        $this->orders->save($order);
+        $this->orderRepository->save($order);
 
         return $order;
     }

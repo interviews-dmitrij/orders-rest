@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\DoctrineOrderRepository;
+use Brick\Math\BigDecimal;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -29,8 +30,8 @@ final class Order
     #[ORM\Column(type: 'date_immutable')]
     public private(set) DateTimeImmutable $expectedDeliveryDate;
 
-    #[ORM\Column(type: 'decimal', precision: 14, scale: 2)]
-    public private(set) string $totalValue;
+    #[ORM\Column(type: 'bigdecimal', precision: 14, scale: 2)]
+    public private(set) BigDecimal $totalValue;
 
     /** @var Collection<int, OrderProduct> */
     #[ORM\OneToMany(targetEntity: OrderProduct::class, mappedBy: 'order', cascade: ['persist', 'remove'], orphanRemoval: true)]
@@ -46,7 +47,7 @@ final class Order
         string $partnerId,
         string $orderId,
         DateTimeImmutable $expectedDeliveryDate,
-        string $totalValue,
+        BigDecimal $totalValue,
         DateTimeImmutable $createdAt,
     ) {
         $this->id = Uuid::v4();

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use Brick\Math\BigDecimal;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
@@ -26,8 +27,8 @@ final class OrderProduct
     #[ORM\Column(type: 'string', length: 255)]
     public private(set) string $name;
 
-    #[ORM\Column(type: 'decimal', precision: 14, scale: 2)]
-    public private(set) string $price;
+    #[ORM\Column(type: 'bigdecimal', precision: 14, scale: 2)]
+    public private(set) BigDecimal $price;
 
     #[ORM\Column(type: 'integer')]
     public private(set) int $quantity;
@@ -36,7 +37,7 @@ final class OrderProduct
         Order $order,
         string $productId,
         string $name,
-        string $price,
+        BigDecimal $price,
         int $quantity,
     ) {
         $this->id = Uuid::v4();
