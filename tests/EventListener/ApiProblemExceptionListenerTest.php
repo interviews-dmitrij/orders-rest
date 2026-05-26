@@ -41,9 +41,9 @@ final class ApiProblemExceptionListenerTest extends TestCase
         self::assertSame(409, $response->getStatusCode());
         self::assertSame('application/problem+json', $response->headers->get('Content-Type'));
 
-        /** @var array{type: string, title: string, status: int, detail: string, instance: string} $body */
+        /** @var array{title: string, status: int, detail: string, instance: string} $body */
         $body = self::decode($response);
-        self::assertSame('duplicate-order', $body['type']);
+        self::assertArrayNotHasKey('type', $body);
         self::assertSame('Duplicate Order', $body['title']);
         self::assertSame(409, $body['status']);
         self::assertSame('/api/v1/partners/PARTNER_A/orders', $body['instance']);
@@ -68,9 +68,9 @@ final class ApiProblemExceptionListenerTest extends TestCase
         self::assertSame(422, $response->getStatusCode());
         self::assertSame('application/problem+json', $response->headers->get('Content-Type'));
 
-        /** @var array{type: string, title: string, status: int, errors: list<array{pointer: string, message: string}>} $body */
+        /** @var array{title: string, status: int, errors: list<array{pointer: string, message: string}>} $body */
         $body = self::decode($response);
-        self::assertSame('validation-failed', $body['type']);
+        self::assertArrayNotHasKey('type', $body);
         self::assertSame('Validation Failed', $body['title']);
         self::assertSame(422, $body['status']);
         self::assertSame(
@@ -85,7 +85,6 @@ final class ApiProblemExceptionListenerTest extends TestCase
 
     public function testMapsWrappedValidationFailureFromMapRequestPayloadResolver(): void
     {
-        // RequestPayloadValueResolver wraps ValidationFailedException in HttpException(422).
         $inner = new ValidationFailedException(
             value: 'dto',
             violations: new ConstraintViolationList([
@@ -102,9 +101,8 @@ final class ApiProblemExceptionListenerTest extends TestCase
         self::assertInstanceOf(JsonResponse::class, $response);
         self::assertSame(422, $response->getStatusCode());
 
-        /** @var array{type: string, title: string, errors: list<array{pointer: string, message: string}>} $body */
+        /** @var array{title: string, errors: list<array{pointer: string, message: string}>} $body */
         $body = self::decode($response);
-        self::assertSame('validation-failed', $body['type']);
         self::assertSame('Validation Failed', $body['title']);
         self::assertSame(
             [['pointer' => '/orderId', 'message' => 'This value should not be blank.']],
@@ -113,33 +111,20 @@ final class ApiProblemExceptionListenerTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{0: HttpExceptionInterface, 1: int, 2: string, 3: string}>
+     * @return iterable<string, array{0: HttpExceptionInterface, 1: int, 2: string}>
      */
     public static function httpExceptionScenarios(): iterable
     {
-        yield '400 bad-request' => [
-            new BadRequestHttpException('malformed json body'),
-            400, 'malformed-json', 'Malformed JSON',
-        ];
-        yield '404 not-found' => [
-            new NotFoundHttpException('no route'),
-            404, 'not-found', 'Not Found',
-        ];
-        yield '405 method-not-allowed' => [
-            new MethodNotAllowedHttpException(['POST']),
-            405, 'method-not-allowed', 'Method Not Allowed',
-        ];
-        yield '415 unsupported-media-type' => [
-            new UnsupportedMediaTypeHttpException('not json'),
-            415, 'unsupported-media-type', 'Unsupported Media Type',
-        ];
+        yield '400 bad-request' => [new BadRequestHttpException('malformed json body'), 400, 'Malformed JSON'];
+        yield '404 not-found' => [new NotFoundHttpException('no route'), 404, 'Not Found'];
+        yield '405 method-not-allowed' => [new MethodNotAllowedHttpException(['POST']), 405, 'Method Not Allowed'];
+        yield '415 unsupported-media-type' => [new UnsupportedMediaTypeHttpException('not json'), 415, 'Unsupported Media Type'];
     }
 
     #[DataProvider('httpExceptionScenarios')]
     public function testMapsHttpExceptionToRfc7807ProblemByStatus(
         HttpExceptionInterface $exception,
         int $expectedStatus,
-        string $expectedSlug,
         string $expectedTitle,
     ): void {
         $listener = new ApiProblemExceptionListener();
@@ -152,9 +137,9 @@ final class ApiProblemExceptionListenerTest extends TestCase
         self::assertSame($expectedStatus, $response->getStatusCode());
         self::assertSame('application/problem+json', $response->headers->get('Content-Type'));
 
-        /** @var array{type: string, title: string, status: int} $body */
+        /** @var array{title: string, status: int} $body */
         $body = self::decode($response);
-        self::assertSame($expectedSlug, $body['type']);
+        self::assertArrayNotHasKey('type', $body);
         self::assertSame($expectedTitle, $body['title']);
         self::assertSame($expectedStatus, $body['status']);
     }
@@ -172,9 +157,9 @@ final class ApiProblemExceptionListenerTest extends TestCase
         self::assertSame(500, $response->getStatusCode());
         self::assertSame('application/problem+json', $response->headers->get('Content-Type'));
 
-        /** @var array{type: string, title: string, status: int, detail: string} $body */
+        /** @var array{title: string, status: int, detail: string} $body */
         $body = self::decode($response);
-        self::assertSame('internal-server-error', $body['type']);
+        self::assertArrayNotHasKey('type', $body);
         self::assertSame('Internal Server Error', $body['title']);
         self::assertSame(500, $body['status']);
         self::assertStringNotContainsString('database connection refused', $body['detail'], 'must not leak raw exception message');

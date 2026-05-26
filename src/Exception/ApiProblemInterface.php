@@ -8,8 +8,6 @@ use Throwable;
 
 interface ApiProblemInterface extends Throwable
 {
-    public function problemSlug(): string;
-
     public function httpStatus(): int;
 
     public function title(): string;

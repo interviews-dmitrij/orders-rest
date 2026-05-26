@@ -94,8 +94,6 @@ final class CreateOrderControllerTest extends WebTestCase
 
         $problem = self::decode($this->client->getResponse()->getContent());
         self::assertSame('Duplicate Order', $problem['title']);
-        self::assertIsString($problem['type']);
-        self::assertStringContainsString('duplicate-order', $problem['type']);
         self::assertSame(409, $problem['status']);
     }
 

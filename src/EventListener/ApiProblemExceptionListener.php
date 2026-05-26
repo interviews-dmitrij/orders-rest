@@ -40,7 +40,6 @@ final class ApiProblemExceptionListener
         }
 
         $event->setResponse($this->problemResponse(
-            slug: 'internal-server-error',
             title: 'Internal Server Error',
             status: 500,
             detail: 'An unexpected error occurred.',
@@ -51,7 +50,6 @@ final class ApiProblemExceptionListener
     private function fromApiProblem(ApiProblemInterface $exception, string $instance): JsonResponse
     {
         return $this->problemResponse(
-            slug: $exception->problemSlug(),
             title: $exception->title(),
             status: $exception->httpStatus(),
             detail: $exception->getMessage(),
@@ -70,7 +68,6 @@ final class ApiProblemExceptionListener
         }
 
         return $this->problemResponse(
-            slug: 'validation-failed',
             title: 'Validation Failed',
             status: 422,
             detail: 'One or more fields failed validation.',
@@ -82,9 +79,8 @@ final class ApiProblemExceptionListener
     private function fromHttpException(HttpExceptionInterface $exception, string $instance): JsonResponse
     {
         $status = $exception->getStatusCode();
-        [$slug, $title] = self::slugAndTitleForStatus($status);
+        $title = self::titleForStatus($status);
         $response = $this->problemResponse(
-            slug: $slug,
             title: $title,
             status: $status,
             detail: '' !== $exception->getMessage() ? $exception->getMessage() : $title,
@@ -103,7 +99,6 @@ final class ApiProblemExceptionListener
      * @param array<string, mixed> $extra
      */
     private function problemResponse(
-        string $slug,
         string $title,
         int $status,
         string $detail,
@@ -111,7 +106,6 @@ final class ApiProblemExceptionListener
         array $extra = [],
     ): JsonResponse {
         $body = [
-            'type' => $slug,
             'title' => $title,
             'status' => $status,
             'detail' => $detail,
@@ -143,18 +137,15 @@ final class ApiProblemExceptionListener
         return null;
     }
 
-    /**
-     * @return array{0: string, 1: string}
-     */
-    private static function slugAndTitleForStatus(int $status): array
+    private static function titleForStatus(int $status): string
     {
         return match ($status) {
-            400 => ['malformed-json', 'Malformed JSON'],
-            404 => ['not-found', 'Not Found'],
-            405 => ['method-not-allowed', 'Method Not Allowed'],
-            415 => ['unsupported-media-type', 'Unsupported Media Type'],
-            422 => ['validation-failed', 'Validation Failed'],
-            default => ['http-error', 'HTTP Error'],
+            400 => 'Malformed JSON',
+            404 => 'Not Found',
+            405 => 'Method Not Allowed',
+            415 => 'Unsupported Media Type',
+            422 => 'Validation Failed',
+            default => 'HTTP Error',
         };
     }
 

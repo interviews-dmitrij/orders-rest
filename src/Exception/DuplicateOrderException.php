@@ -20,11 +20,6 @@ final class DuplicateOrderException extends RuntimeException implements ApiProbl
         );
     }
 
-    public function problemSlug(): string
-    {
-        return 'duplicate-order';
-    }
-
     public function httpStatus(): int
     {
         return 409;
