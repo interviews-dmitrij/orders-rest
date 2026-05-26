@@ -6,13 +6,17 @@ namespace App\Tests\EventListener;
 
 use App\EventListener\ApiProblemExceptionListener;
 use App\Exception\DuplicateOrderException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnsupportedMediaTypeHttpException;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\Validator\ConstraintViolation;
@@ -118,27 +122,51 @@ final class ApiProblemExceptionListenerTest extends TestCase
         );
     }
 
-    public function testMapsUnsupportedMediaTypeToRfc7807Problem(): void
+    /**
+     * @return iterable<string, array{0: HttpExceptionInterface, 1: int, 2: string, 3: string}>
+     */
+    public static function httpExceptionScenarios(): iterable
     {
-        // Arrange
+        yield '400 bad-request' => [
+            new BadRequestHttpException('malformed json body'),
+            400, 'malformed-json', 'Malformed JSON',
+        ];
+        yield '404 not-found' => [
+            new NotFoundHttpException('no route'),
+            404, 'not-found', 'Not Found',
+        ];
+        yield '405 method-not-allowed' => [
+            new MethodNotAllowedHttpException(['POST']),
+            405, 'method-not-allowed', 'Method Not Allowed',
+        ];
+        yield '415 unsupported-media-type' => [
+            new UnsupportedMediaTypeHttpException('not json'),
+            415, 'unsupported-media-type', 'Unsupported Media Type',
+        ];
+    }
+
+    #[DataProvider('httpExceptionScenarios')]
+    public function testMapsHttpExceptionToRfc7807ProblemByStatus(
+        HttpExceptionInterface $exception,
+        int $expectedStatus,
+        string $expectedSlug,
+        string $expectedTitle,
+    ): void {
         $listener = new ApiProblemExceptionListener(self::PROBLEM_BASE);
-        $exception = new UnsupportedMediaTypeHttpException('text/plain is not supported');
         $event = $this->event('/api/v1/partners/PARTNER_A/orders', $exception);
 
-        // Act
         $listener->onKernelException($event);
 
-        // Assert
         $response = $event->getResponse();
         self::assertInstanceOf(JsonResponse::class, $response);
-        self::assertSame(415, $response->getStatusCode());
+        self::assertSame($expectedStatus, $response->getStatusCode());
+        self::assertSame('application/problem+json', $response->headers->get('Content-Type'));
 
-        /** @var array{type: string, title: string, status: int, detail: string} $body */
+        /** @var array{type: string, title: string, status: int} $body */
         $body = self::decode($response);
-        self::assertSame(self::PROBLEM_BASE . '/unsupported-media-type', $body['type']);
-        self::assertSame('Unsupported Media Type', $body['title']);
-        self::assertSame(415, $body['status']);
-        self::assertStringContainsString('text/plain', $body['detail']);
+        self::assertSame(self::PROBLEM_BASE . '/' . $expectedSlug, $body['type']);
+        self::assertSame($expectedTitle, $body['title']);
+        self::assertSame($expectedStatus, $body['status']);
     }
 
     public function testMapsUnknownThrowableToInternalServerError(): void
