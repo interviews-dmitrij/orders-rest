@@ -7,14 +7,16 @@ namespace App\Tests\Service;
 use App\Dto\Request\UpdateOrderDeliveryDateRequest;
 use App\Entity\Order;
 use App\Event\OrderDeliveryDateChangedEvent;
+use App\EventListener\OrderAuditListener;
 use App\Exception\OrderNotFoundException;
 use App\Service\UpdateOrderDeliveryDateHandler;
+use App\Tests\Repository\InMemoryOrderAuditLogRepository;
 use App\Tests\Repository\InMemoryOrderRepository;
 use App\UserContext\MockUserContext;
 use Brick\Math\BigDecimal;
 use DateTimeImmutable;
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
@@ -32,13 +34,8 @@ final class UpdateOrderDeliveryDateHandlerTest extends TestCase
         $this->repository = new InMemoryOrderRepository();
         $this->clock = new MockClock('2026-05-26T11:30:00+00:00');
         $this->eventDispatcher = new EventDispatcher();
-        $entityManager = self::createStub(EntityManagerInterface::class);
-        $entityManager->method('wrapInTransaction')->willReturnCallback(
-            static fn (callable $func): mixed => $func(),
-        );
         $this->handler = new UpdateOrderDeliveryDateHandler(
             $this->repository,
-            $entityManager,
             $this->clock,
             $this->eventDispatcher,
             new MockUserContext(),
@@ -135,6 +132,27 @@ final class UpdateOrderDeliveryDateHandlerTest extends TestCase
         } catch (OrderNotFoundException) {
             self::assertNull($captured, 'no event must be dispatched if the lookup fails');
         }
+    }
+
+    /**
+     * Atomicity contract: audit persistence is wired inside the transaction wrapper. A
+     * failure in the listener must propagate out of the handler — silently swallowing
+     * audit errors would let the order update commit without a paired audit row,
+     * exactly what the wrapping was added to prevent.
+     */
+    public function testAuditPersistenceFailurePropagatesFromTheHandler(): void
+    {
+        $this->seedOrder();
+        $auditLogRepository = new InMemoryOrderAuditLogRepository();
+        $auditLogRepository->failNextSave();
+        $this->eventDispatcher->addListener(
+            OrderDeliveryDateChangedEvent::class,
+            new OrderAuditListener($auditLogRepository)->onDeliveryDateChanged(...),
+        );
+
+        $this->expectException(RuntimeException::class);
+
+        $this->handler->update('PARTNER_A', 'ORD-001', new UpdateOrderDeliveryDateRequest(new DateTimeImmutable('2026-07-20')));
     }
 
     private function seedOrder(): Order

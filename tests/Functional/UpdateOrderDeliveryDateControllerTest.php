@@ -67,6 +67,7 @@ final class UpdateOrderDeliveryDateControllerTest extends WebTestCase
         $problem = self::decode($this->client->getResponse()->getContent());
         self::assertSame('Order Not Found', $problem['title']);
         self::assertSame(404, $problem['status']);
+        self::assertCount(0, self::loadAuditLogs(), 'failed lookup must not write to the audit log');
     }
 
     /**
@@ -89,6 +90,7 @@ final class UpdateOrderDeliveryDateControllerTest extends WebTestCase
         $original = self::loadPersisted();
         self::assertNotNull($original);
         self::assertSame('2026-06-15', $original->expectedDeliveryDate->format('Y-m-d'), 'cross-partner call must not touch the original order');
+        self::assertCount(0, self::loadAuditLogs(), 'cross-partner attempt must not leak into the audit trail');
     }
 
     public function testRejectsMissingExpectedDeliveryDateWithFieldLevelProblemDetail(): void
@@ -102,6 +104,7 @@ final class UpdateOrderDeliveryDateControllerTest extends WebTestCase
 
         $problem = self::decode($this->client->getResponse()->getContent());
         self::assertContains('/expectedDeliveryDate', array_column(self::errors($problem), 'pointer'));
+        self::assertCount(0, self::loadAuditLogs(), 'validation failure must not write to the audit log');
     }
 
     public function testRejectsMalformedDate(): void
@@ -194,6 +197,20 @@ final class UpdateOrderDeliveryDateControllerTest extends WebTestCase
     {
         return static::getContainer()->get(OrderRepositoryInterface::class)
             ->findByCompositeKey(self::PARTNER_ID, self::ORDER_ID);
+    }
+
+    /**
+     * @return list<OrderAuditLog>
+     */
+    private static function loadAuditLogs(): array
+    {
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+
+        /** @var list<OrderAuditLog> $logs */
+        $logs = $entityManager->getRepository(OrderAuditLog::class)
+            ->findBy(['partnerId' => self::PARTNER_ID, 'orderIdValue' => self::ORDER_ID]);
+
+        return $logs;
     }
 
     /**
