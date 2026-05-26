@@ -13,16 +13,7 @@ use Symfony\Component\Serializer\Exception\NotNormalizableValueException;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
-/**
- * Bridges `Brick\Math\BigDecimal` into Symfony Serializer.
- *
- * Wire format is a decimal string (e.g. `"1299.99"`) per the OpenAPI contract.
- * The denormalizer accepts a numeric string or PHP integer and always returns
- * a `BigDecimal` at scale 2 (rejects inputs with > 2 fractional digits to keep
- * the domain invariant explicit at the boundary). The normalizer renders any
- * `BigDecimal` as a scale-2 string for symmetric round-trip.
- */
-#[AutoconfigureTag('serializer.normalizer')]
+#[AutoconfigureTag('serializer.normalizer', attributes: ['priority' => 1000])]
 final class BigDecimalNormalizer implements NormalizerInterface, DenormalizerInterface
 {
     private const int MONEY_SCALE = 2;
