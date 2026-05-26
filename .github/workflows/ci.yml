@@ -20,7 +20,7 @@ jobs:
         env:
           POSTGRES_DB: app
           POSTGRES_USER: app
-          POSTGRES_PASSWORD: app
+          POSTGRES_PASSWORD: "!ChangeMe!"
         ports:
           - 5432:5432
         options: >-
@@ -32,7 +32,9 @@ jobs:
       APP_ENV: dev
       APP_DEBUG: '1'
       APP_SECRET: ci-secret-not-used
-      DATABASE_URL: "postgresql://app:app@127.0.0.1:5432/app?serverVersion=16&charset=utf8"
+      # Mirrors `.env` defaults so `symfony php` (which re-reads `.env`) and the
+      # workflow env stay consistent.
+      DATABASE_URL: "postgresql://app:!ChangeMe!@127.0.0.1:5432/app?serverVersion=16&charset=utf8"
     steps:
       - uses: actions/checkout@v4
 
