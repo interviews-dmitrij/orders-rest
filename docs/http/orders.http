@@ -1,15 +1,10 @@
 ###
 # Manual HTTP requests against the Orders REST API.
 #
-# VS Code: install the "REST Client" extension (humao.rest-client). A workspace
-# recommendation is registered in .vscode/extensions.json so VS Code will
-# prompt on open. JetBrains IDEs run .http files out of the box.
+# VS Code: install the "REST Client" extension (humao.rest-client)
 #
 # Start the API locally first:
 #   symfony serve -d
-#
-# Click "Send Request" above each block (VS Code) or press Ctrl/Cmd+Enter
-# inside the block (JetBrains).
 ###
 
 @baseUrl    = http://127.0.0.1:8000
