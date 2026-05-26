@@ -52,6 +52,30 @@ final class CreateOrderControllerTest extends WebTestCase
         self::assertArrayHasKey('updatedAt', $body);
     }
 
+    public function testReturnsFourTwoTwoProblemJsonWhenTotalValueIsNegative(): void
+    {
+        $this->client->jsonRequest(
+            'POST',
+            '/api/v1/partners/PARTNER_FN/orders',
+            [
+                'orderId' => 'ORD-FN-NEG',
+                'expectedDeliveryDate' => '2026-06-15',
+                'totalValue' => '-1.00',
+                'products' => [
+                    ['productId' => 'SKU-FN-NEG', 'name' => 'Test Item', 'price' => '1.00', 'quantity' => 1],
+                ],
+            ],
+        );
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertResponseHeaderSame('Content-Type', 'application/problem+json');
+
+        $problem = self::decode($this->client->getResponse()->getContent());
+        self::assertSame('Validation Failed', $problem['title']);
+        self::assertSame(422, $problem['status']);
+        self::assertIsArray($problem['errors']);
+    }
+
     public function testReturnsFourZeroNineProblemJsonOnDuplicateCompositeKey(): void
     {
         $body = [
