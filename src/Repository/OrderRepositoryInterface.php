@@ -15,4 +15,13 @@ interface OrderRepositoryInterface
     public function save(Order $order): void;
 
     public function findByCompositeKey(string $partnerId, string $orderId): ?Order;
+
+    /**
+     * @template T
+     *
+     * @param callable(): T $action
+     *
+     * @return T
+     */
+    public function wrapInTransaction(callable $action): mixed;
 }
