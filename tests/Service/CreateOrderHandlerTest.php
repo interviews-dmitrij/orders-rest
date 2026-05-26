@@ -9,6 +9,7 @@ use App\Dto\Request\CreateOrderRequest;
 use App\Exception\DuplicateOrderException;
 use App\Service\CreateOrderHandler;
 use App\Tests\Repository\InMemoryOrderRepository;
+use Brick\Math\BigDecimal;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
@@ -21,12 +22,12 @@ final class CreateOrderHandlerTest extends TestCase
         $request = new CreateOrderRequest(
             orderId: 'ORD-2026-00001',
             expectedDeliveryDate: new DateTimeImmutable('2026-06-15'),
-            totalValue: '499.00',
+            totalValue: BigDecimal::of('499.00'),
             products: [
                 new CreateOrderProductRequest(
                     productId: 'SKU-005',
                     name: 'Mechanical Keyboard',
-                    price: '499.00',
+                    price: BigDecimal::of('499.00'),
                     quantity: 1,
                 ),
             ],
@@ -49,11 +50,11 @@ final class CreateOrderHandlerTest extends TestCase
         $request = new CreateOrderRequest(
             orderId: 'ORD-2026-00002',
             expectedDeliveryDate: new DateTimeImmutable('2026-06-20'),
-            totalValue: '1299.99',
+            totalValue: BigDecimal::of('1299.99'),
             products: [
-                new CreateOrderProductRequest('SKU-001', 'Bluetooth Headphones', '129.99', 2),
-                new CreateOrderProductRequest('SKU-002', 'USB-C Cable, 2 m', '9.99', 4),
-                new CreateOrderProductRequest('SKU-003', 'Phone Stand', '49.99', 1),
+                new CreateOrderProductRequest('SKU-001', 'Bluetooth Headphones', BigDecimal::of('129.99'), 2),
+                new CreateOrderProductRequest('SKU-002', 'USB-C Cable, 2 m', BigDecimal::of('9.99'), 4),
+                new CreateOrderProductRequest('SKU-003', 'Phone Stand', BigDecimal::of('49.99'), 1),
             ],
         );
 
@@ -83,31 +84,13 @@ final class CreateOrderHandlerTest extends TestCase
         $request = new CreateOrderRequest(
             orderId: 'ORD-DUP',
             expectedDeliveryDate: new DateTimeImmutable('2026-06-15'),
-            totalValue: '100.00',
-            products: [new CreateOrderProductRequest('SKU-1', 'Item', '100.00', 1)],
+            totalValue: BigDecimal::of('100.00'),
+            products: [new CreateOrderProductRequest('SKU-1', 'Item', BigDecimal::of('100.00'), 1)],
         );
         $handler->create('PARTNER_A', $request);
 
         $this->expectException(DuplicateOrderException::class);
         $handler->create('PARTNER_A', $request);
-    }
-
-    public function testNormalizesTotalAndPriceToScaleTwo(): void
-    {
-        $handler = new CreateOrderHandler(new InMemoryOrderRepository());
-        $request = new CreateOrderRequest(
-            orderId: 'ORD-SCALE',
-            expectedDeliveryDate: new DateTimeImmutable('2026-06-15'),
-            totalValue: '499',
-            products: [new CreateOrderProductRequest('SKU-1', 'Item', '9.9', 1)],
-        );
-
-        $order = $handler->create('PARTNER_A', $request);
-
-        $product = $order->products->first();
-        self::assertNotFalse($product);
-        self::assertSame('499.00', (string) $order->totalValue);
-        self::assertSame('9.90', (string) $product->price);
     }
 
     public function testChecksRepositoryForExistingOrderBeforeConstructingEntities(): void
@@ -137,8 +120,8 @@ final class CreateOrderHandlerTest extends TestCase
         return new CreateOrderRequest(
             orderId: $orderId,
             expectedDeliveryDate: new DateTimeImmutable('2026-06-15'),
-            totalValue: '100.00',
-            products: [new CreateOrderProductRequest('SKU-1', 'Item', '100.00', 1)],
+            totalValue: BigDecimal::of('100.00'),
+            products: [new CreateOrderProductRequest('SKU-1', 'Item', BigDecimal::of('100.00'), 1)],
         );
     }
 }

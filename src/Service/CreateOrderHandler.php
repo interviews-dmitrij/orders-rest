@@ -9,7 +9,6 @@ use App\Entity\Order;
 use App\Entity\OrderProduct;
 use App\Exception\DuplicateOrderException;
 use App\Repository\OrderRepositoryInterface;
-use Brick\Math\BigDecimal;
 use DateTimeImmutable;
 
 final class CreateOrderHandler
@@ -28,24 +27,20 @@ final class CreateOrderHandler
             throw new DuplicateOrderException($partnerId, $request->orderId);
         }
 
-        $totalValue = BigDecimal::of($request->totalValue)->toScale(2);
-
         $order = new Order(
             partnerId: $partnerId,
             orderId: $request->orderId,
             expectedDeliveryDate: $request->expectedDeliveryDate,
-            totalValue: $totalValue,
+            totalValue: $request->totalValue,
             createdAt: new DateTimeImmutable(),
         );
 
         foreach ($request->products as $productRequest) {
-            $price = BigDecimal::of($productRequest->price)->toScale(2);
-
             $product = new OrderProduct(
                 order: $order,
                 productId: $productRequest->productId,
                 name: $productRequest->name,
-                price: $price,
+                price: $productRequest->price,
                 quantity: $productRequest->quantity,
             );
             $order->products->add($product);

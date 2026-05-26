@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Request;
 
+use Brick\Math\BigDecimal;
 use DateTimeImmutable;
 use Symfony\Component\Serializer\Attribute\Context;
 use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
@@ -23,12 +24,7 @@ final readonly class CreateOrderRequest
         #[Context([DateTimeNormalizer::FORMAT_KEY => 'Y-m-d'])]
         public DateTimeImmutable $expectedDeliveryDate,
 
-        #[Assert\NotBlank]
-        #[Assert\Regex(
-            pattern: '/^\d{1,12}(\.\d{1,2})?$/',
-            message: 'This value is not in the expected format.',
-        )]
-        public string $totalValue,
+        public BigDecimal $totalValue,
 
         #[Assert\Count(
             min: 1,
