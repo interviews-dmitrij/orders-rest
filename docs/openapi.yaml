@@ -93,6 +93,8 @@ paths:
                     updatedAt: "2026-05-26T10:14:53+00:00"
         '400':
           $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '405':
           $ref: '#/components/responses/MethodNotAllowed'
         '409':
