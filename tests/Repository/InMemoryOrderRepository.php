@@ -24,7 +24,10 @@ final class InMemoryOrderRepository implements OrderRepositoryInterface
     public function save(Order $order): void
     {
         $key = $this->key($order->partnerId, $order->orderId);
-        if (isset($this->orders[$key])) {
+        // Same-instance identity check: re-saving the previously stored object is a no-op
+        // (mirrors Doctrine `persist` + `flush` on a managed entity). A *different* object
+        // colliding on the same composite key still throws.
+        if (isset($this->orders[$key]) && $this->orders[$key] !== $order) {
             throw new DuplicateOrderException($order->partnerId, $order->orderId);
         }
         $this->orders[$key] = $order;

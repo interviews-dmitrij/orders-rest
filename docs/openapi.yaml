@@ -470,11 +470,11 @@ components:
                 instance: "/api/v1/partners/PARTNER_A/orders"
                 errors:
                   - pointer: "/products/0/quantity"
-                    message: "This value should be greater than or equal to 1."
+                    message: "This value should be between 1 and 1000000."
                   - pointer: "/totalValue"
                     message: "This value should be greater than or equal to 0."
                   - pointer: "/expectedDeliveryDate"
-                    message: "This value is not a valid date."
+                    message: "This value should be of type string."
             empty-products:
               value:
                 title: "Validation Failed"
