@@ -20,16 +20,24 @@ final class BigDecimalNormalizerTest extends TestCase
         $this->normalizer = new BigDecimalNormalizer();
     }
 
-    public function testNormalizesBigDecimalToScaleTwoString(): void
+    /**
+     * @return iterable<string, array{0: string, 1: string}>
+     */
+    public static function normalizationRoundtrip(): iterable
     {
-        $result = $this->normalizer->normalize(BigDecimal::of('1299.99'));
-        self::assertSame('1299.99', $result);
+        yield 'two fractional digits' => ['1299.99', '1299.99'];
+        yield 'no fractional digits preserved as scale zero' => ['499', '499'];
+        yield 'single fractional digit preserved' => ['1.5', '1.5'];
+        yield 'four fractional digits preserved' => ['0.0001', '0.0001'];
+        yield 'negative value preserved' => ['-5.50', '-5.50'];
     }
 
-    public function testNormalizesScaleZeroValueWithExplicitTwoFractionalDigits(): void
+    #[DataProvider('normalizationRoundtrip')]
+    public function testNormalizePreservesNativeScale(string $input, string $expected): void
     {
-        $result = $this->normalizer->normalize(BigDecimal::of('499'));
-        self::assertSame('499.00', $result);
+        $result = $this->normalizer->normalize(BigDecimal::of($input));
+
+        self::assertSame($expected, $result);
     }
 
     public function testSupportsNormalizationForBigDecimal(): void
@@ -39,29 +47,24 @@ final class BigDecimalNormalizerTest extends TestCase
         self::assertFalse($this->normalizer->supportsNormalization(new stdClass()));
     }
 
-    public function testDenormalizesNumericStringToBigDecimalAtScaleTwo(): void
+    /**
+     * @return iterable<string, array{0: string|int, 1: string}>
+     */
+    public static function denormalizationRoundtrip(): iterable
     {
-        $result = $this->normalizer->denormalize('1299.99', BigDecimal::class);
-        self::assertSame('1299.99', (string) $result);
+        yield 'numeric string two fractional digits' => ['1299.99', '1299.99'];
+        yield 'numeric string four fractional digits' => ['0.1234', '0.1234'];
+        yield 'numeric string no fractional digits' => ['499', '499'];
+        yield 'php integer' => [499, '499'];
+        yield 'negative decimal string' => ['-5.50', '-5.50'];
     }
 
-    public function testDenormalizesIntegerStringWithoutFractionalToScaleTwo(): void
+    #[DataProvider('denormalizationRoundtrip')]
+    public function testDenormalizePreservesNativeScale(string|int $input, string $expected): void
     {
-        $result = $this->normalizer->denormalize('499', BigDecimal::class);
-        self::assertSame('499.00', (string) $result);
-    }
+        $result = $this->normalizer->denormalize($input, BigDecimal::class);
 
-    public function testDenormalizesIntegerToBigDecimalAtScaleTwo(): void
-    {
-        $result = $this->normalizer->denormalize(499, BigDecimal::class);
-        self::assertSame('499.00', (string) $result);
-    }
-
-    public function testDenormalizesNegativeValuesAsIs(): void
-    {
-        $result = $this->normalizer->denormalize('-5.50', BigDecimal::class);
-
-        self::assertSame('-5.50', (string) $result);
+        self::assertSame($expected, (string) $result);
     }
 
     public function testDenormalizationThrowsOnMalformedString(): void
@@ -75,10 +78,10 @@ final class BigDecimalNormalizerTest extends TestCase
      */
     public static function rejectedInputsWithExpectedMessage(): iterable
     {
-        yield 'more than two fractional digits' => ['1.234', 'more than 2 fractional digits'];
         yield 'array input' => [['nested' => 'object'], 'numeric string or integer'];
         yield 'float input' => [1.5, 'numeric string or integer'];
         yield 'boolean input' => [true, 'numeric string or integer'];
+        yield 'null input' => [null, 'numeric string or integer'];
     }
 
     #[DataProvider('rejectedInputsWithExpectedMessage')]

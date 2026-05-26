@@ -6,7 +6,6 @@ namespace App\Serializer;
 
 use Brick\Math\BigDecimal;
 use Brick\Math\Exception\MathException;
-use Brick\Math\RoundingMode;
 use InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Serializer\Exception\NotNormalizableValueException;
@@ -16,8 +15,6 @@ use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 #[AutoconfigureTag('serializer.normalizer', attributes: ['priority' => 1000])]
 final class BigDecimalNormalizer implements NormalizerInterface, DenormalizerInterface
 {
-    private const int MONEY_SCALE = 2;
-
     public function normalize(mixed $object, ?string $format = null, array $context = []): string
     {
         if (!$object instanceof BigDecimal) {
@@ -26,7 +23,7 @@ final class BigDecimalNormalizer implements NormalizerInterface, DenormalizerInt
             );
         }
 
-        return (string) $object->toScale(self::MONEY_SCALE);
+        return (string) $object;
     }
 
     public function supportsNormalization(mixed $data, ?string $format = null, array $context = []): bool
@@ -49,24 +46,10 @@ final class BigDecimalNormalizer implements NormalizerInterface, DenormalizerInt
         }
 
         try {
-            $value = BigDecimal::of((string) $data);
+            return BigDecimal::of((string) $data);
         } catch (MathException $exception) {
             throw NotNormalizableValueException::createForUnexpectedDataType(
                 $exception->getMessage(),
-                $data,
-                [BigDecimal::class],
-                $deserializationPath,
-                true,
-                0,
-                $exception,
-            );
-        }
-
-        try {
-            return $value->toScale(self::MONEY_SCALE, RoundingMode::Unnecessary);
-        } catch (MathException $exception) {
-            throw NotNormalizableValueException::createForUnexpectedDataType(
-                'Value has more than ' . self::MONEY_SCALE . ' fractional digits.',
                 $data,
                 [BigDecimal::class],
                 $deserializationPath,

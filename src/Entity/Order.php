@@ -30,7 +30,7 @@ final class Order
     #[ORM\Column(type: 'date_immutable')]
     public private(set) DateTimeImmutable $expectedDeliveryDate;
 
-    #[ORM\Column(type: 'bigdecimal', precision: 14, scale: 2)]
+    #[ORM\Column(type: 'bigdecimal', precision: 38, scale: 18)]
     public private(set) BigDecimal $totalValue;
 
     /** @var Collection<int, OrderProduct> */

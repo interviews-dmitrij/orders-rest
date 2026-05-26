@@ -27,7 +27,7 @@ final class OrderProduct
     #[ORM\Column(type: 'string', length: 255)]
     public private(set) string $name;
 
-    #[ORM\Column(type: 'bigdecimal', precision: 14, scale: 2)]
+    #[ORM\Column(type: 'bigdecimal', precision: 38, scale: 18)]
     public private(set) BigDecimal $price;
 
     #[ORM\Column(type: 'integer')]

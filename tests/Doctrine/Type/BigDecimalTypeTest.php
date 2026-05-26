@@ -49,8 +49,8 @@ final class BigDecimalTypeTest extends TestCase
 
     public function testSqlDeclarationDelegatesToPlatformDecimal(): void
     {
-        $sql = $this->type->getSQLDeclaration(['precision' => 14, 'scale' => 2], $this->platform);
-        self::assertSame('NUMERIC(14, 2)', $sql);
+        $sql = $this->type->getSQLDeclaration(['precision' => 38, 'scale' => 18], $this->platform);
+        self::assertSame('NUMERIC(38, 18)', $sql);
     }
 
     public function testRejectsWrongPhpTypeOnConvertToDatabase(): void

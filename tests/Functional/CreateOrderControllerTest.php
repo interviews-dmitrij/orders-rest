@@ -28,7 +28,7 @@ final class CreateOrderControllerTest extends WebTestCase
                 'expectedDeliveryDate' => '2026-06-15',
                 'totalValue' => '499',
                 'products' => [
-                    ['productId' => 'SKU-FN-1', 'name' => 'Test Item', 'price' => '249.5', 'quantity' => 2],
+                    ['productId' => 'SKU-FN-1', 'name' => 'Test Item', 'price' => '10.5111', 'quantity' => 2],
                 ],
             ],
         );
@@ -40,11 +40,11 @@ final class CreateOrderControllerTest extends WebTestCase
         self::assertSame('PARTNER_FN', $body['partnerId']);
         self::assertSame('ORD-FN-001', $body['orderId']);
         self::assertSame('2026-06-15', $body['expectedDeliveryDate']);
-        self::assertSame('499.00', $body['totalValue'], 'totalValue must be normalised to scale 2');
+        self::assertSame('499', $body['totalValue'], 'totalValue must echo the raw client value');
         self::assertIsArray($body['products']);
         $firstProduct = $body['products'][0];
         self::assertIsArray($firstProduct);
-        self::assertSame('249.50', $firstProduct['price'], 'price must be normalised to scale 2');
+        self::assertSame('10.5111', $firstProduct['price'], 'price must echo the raw client value');
         self::assertSame(2, $firstProduct['quantity']);
         self::assertSame('SKU-FN-1', $firstProduct['productId']);
         self::assertSame('Test Item', $firstProduct['name']);

@@ -22,7 +22,7 @@ final class Version20260526130000 extends AbstractMigration
                 partner_id VARCHAR(64) NOT NULL,
                 order_id VARCHAR(64) NOT NULL,
                 expected_delivery_date DATE NOT NULL,
-                total_value NUMERIC(14, 2) NOT NULL,
+                total_value NUMERIC(38, 18) NOT NULL,
                 created_at TIMESTAMP(0) WITH TIME ZONE NOT NULL,
                 updated_at TIMESTAMP(0) WITH TIME ZONE NOT NULL,
                 PRIMARY KEY (id)
@@ -36,7 +36,7 @@ final class Version20260526130000 extends AbstractMigration
                 order_id UUID NOT NULL,
                 product_id VARCHAR(64) NOT NULL,
                 name VARCHAR(255) NOT NULL,
-                price NUMERIC(14, 2) NOT NULL,
+                price NUMERIC(38, 18) NOT NULL,
                 quantity INT NOT NULL,
                 PRIMARY KEY (id)
             )
