@@ -32,15 +32,12 @@ final class ApiProblemExceptionListenerTest extends TestCase
 
     public function testMapsApiProblemExceptionToRfc7807Response(): void
     {
-        // Arrange
         $listener = new ApiProblemExceptionListener(self::PROBLEM_BASE);
         $exception = new DuplicateOrderException('PARTNER_A', 'ORD-001');
         $event = $this->event('/api/v1/partners/PARTNER_A/orders', $exception);
 
-        // Act
         $listener->onKernelException($event);
 
-        // Assert
         $response = $event->getResponse();
         self::assertInstanceOf(JsonResponse::class, $response);
         self::assertSame(409, $response->getStatusCode());
@@ -57,7 +54,6 @@ final class ApiProblemExceptionListenerTest extends TestCase
 
     public function testMapsValidationFailedToRfc7807ValidationProblem(): void
     {
-        // Arrange
         $listener = new ApiProblemExceptionListener(self::PROBLEM_BASE);
         $violations = new ConstraintViolationList([
             $this->violation('This value should not be blank.', 'orderId'),
@@ -67,10 +63,8 @@ final class ApiProblemExceptionListenerTest extends TestCase
         $exception = new ValidationFailedException(value: 'dto', violations: $violations);
         $event = $this->event('/api/v1/partners/PARTNER_A/orders', $exception);
 
-        // Act
         $listener->onKernelException($event);
 
-        // Assert
         $response = $event->getResponse();
         self::assertInstanceOf(JsonResponse::class, $response);
         self::assertSame(422, $response->getStatusCode());
@@ -93,7 +87,7 @@ final class ApiProblemExceptionListenerTest extends TestCase
 
     public function testMapsWrappedValidationFailureFromMapRequestPayloadResolver(): void
     {
-        // Arrange — RequestPayloadValueResolver wraps ValidationFailedException in HttpException(422).
+        // RequestPayloadValueResolver wraps ValidationFailedException in HttpException(422).
         $inner = new ValidationFailedException(
             value: 'dto',
             violations: new ConstraintViolationList([
@@ -104,10 +98,8 @@ final class ApiProblemExceptionListenerTest extends TestCase
         $listener = new ApiProblemExceptionListener(self::PROBLEM_BASE);
         $event = $this->event('/api/v1/partners/PARTNER_A/orders', $outer);
 
-        // Act
         $listener->onKernelException($event);
 
-        // Assert
         $response = $event->getResponse();
         self::assertInstanceOf(JsonResponse::class, $response);
         self::assertSame(422, $response->getStatusCode());
