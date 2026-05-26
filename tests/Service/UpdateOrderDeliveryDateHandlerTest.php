@@ -13,6 +13,7 @@ use App\Tests\Repository\InMemoryOrderRepository;
 use App\UserContext\MockUserContext;
 use Brick\Math\BigDecimal;
 use DateTimeImmutable;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -31,8 +32,13 @@ final class UpdateOrderDeliveryDateHandlerTest extends TestCase
         $this->repository = new InMemoryOrderRepository();
         $this->clock = new MockClock('2026-05-26T11:30:00+00:00');
         $this->eventDispatcher = new EventDispatcher();
+        $entityManager = self::createStub(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')->willReturnCallback(
+            static fn (callable $func): mixed => $func(),
+        );
         $this->handler = new UpdateOrderDeliveryDateHandler(
             $this->repository,
+            $entityManager,
             $this->clock,
             $this->eventDispatcher,
             new MockUserContext(),
