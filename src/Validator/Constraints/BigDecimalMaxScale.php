@@ -10,6 +10,8 @@ use Symfony\Component\Validator\Constraint;
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_METHOD | Attribute::IS_REPEATABLE)]
 final class BigDecimalMaxScale extends Constraint
 {
+    public const string SCALE_EXCEEDED_ERROR = 'big-decimal-scale-exceeded';
+
     public string $message = 'This value should have at most {{ max }} fractional digits.';
 
     /**

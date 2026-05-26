@@ -64,7 +64,7 @@ final class BigDecimalGreaterThanOrEqualValidatorTest extends ConstraintValidato
 
         $this->buildViolation('This value should be greater than or equal to {{ compared_value }}.')
             ->setParameter('{{ compared_value }}', $threshold)
-            ->setCode('big-decimal-greater-than-or-equal')
+            ->setCode(BigDecimalGreaterThanOrEqual::LESS_THAN_THRESHOLD_ERROR)
             ->assertRaised();
     }
 
@@ -76,7 +76,7 @@ final class BigDecimalGreaterThanOrEqualValidatorTest extends ConstraintValidato
 
         $this->buildViolation('Negative is forbidden.')
             ->setParameter('{{ compared_value }}', '0')
-            ->setCode('big-decimal-greater-than-or-equal')
+            ->setCode(BigDecimalGreaterThanOrEqual::LESS_THAN_THRESHOLD_ERROR)
             ->assertRaised();
     }
 

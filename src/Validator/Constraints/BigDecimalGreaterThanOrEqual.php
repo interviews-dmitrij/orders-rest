@@ -10,6 +10,8 @@ use Symfony\Component\Validator\Constraint;
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_METHOD | Attribute::IS_REPEATABLE)]
 final class BigDecimalGreaterThanOrEqual extends Constraint
 {
+    public const string LESS_THAN_THRESHOLD_ERROR = 'big-decimal-less-than-threshold';
+
     public string $message = 'This value should be greater than or equal to {{ compared_value }}.';
 
     /**

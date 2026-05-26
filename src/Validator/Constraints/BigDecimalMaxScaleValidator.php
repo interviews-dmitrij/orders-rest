@@ -29,7 +29,7 @@ final class BigDecimalMaxScaleValidator extends ConstraintValidator
         if ($value->getScale() > $constraint->max) {
             $this->context->buildViolation($constraint->message)
                 ->setParameter('{{ max }}', (string) $constraint->max)
-                ->setCode('big-decimal-max-scale')
+                ->setCode(BigDecimalMaxScale::SCALE_EXCEEDED_ERROR)
                 ->addViolation();
         }
     }

@@ -62,7 +62,7 @@ final class BigDecimalMaxScaleValidatorTest extends ConstraintValidatorTestCase
 
         $this->buildViolation('This value should have at most {{ max }} fractional digits.')
             ->setParameter('{{ max }}', (string) $max)
-            ->setCode('big-decimal-max-scale')
+            ->setCode(BigDecimalMaxScale::SCALE_EXCEEDED_ERROR)
             ->assertRaised();
     }
 
@@ -74,7 +74,7 @@ final class BigDecimalMaxScaleValidatorTest extends ConstraintValidatorTestCase
 
         $this->buildViolation('Too many digits after the decimal point.')
             ->setParameter('{{ max }}', '5')
-            ->setCode('big-decimal-max-scale')
+            ->setCode(BigDecimalMaxScale::SCALE_EXCEEDED_ERROR)
             ->assertRaised();
     }
 

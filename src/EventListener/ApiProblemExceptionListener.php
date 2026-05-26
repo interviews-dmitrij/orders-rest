@@ -119,10 +119,6 @@ final class ApiProblemExceptionListener
         return $response;
     }
 
-    /**
-     * Returns the inner ValidationFailedException if `$exception` is one, or
-     * wraps one (RequestPayloadValueResolver wraps in HttpException).
-     */
     private static function extractValidationFailure(Throwable $exception): ?ValidationFailedException
     {
         if ($exception instanceof ValidationFailedException) {
@@ -149,10 +145,6 @@ final class ApiProblemExceptionListener
         };
     }
 
-    /**
-     * Converts a Symfony property path (`products[0].quantity`) into an
-     * RFC 6901 JSON Pointer (`/products/0/quantity`).
-     */
     private static function propertyPathToJsonPointer(string $path): string
     {
         if ('' === $path) {

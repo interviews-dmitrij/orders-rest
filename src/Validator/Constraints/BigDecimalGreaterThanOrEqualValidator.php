@@ -29,7 +29,7 @@ final class BigDecimalGreaterThanOrEqualValidator extends ConstraintValidator
         if ($value->isLessThan(BigDecimal::of($constraint->value))) {
             $this->context->buildViolation($constraint->message)
                 ->setParameter('{{ compared_value }}', $constraint->value)
-                ->setCode('big-decimal-greater-than-or-equal')
+                ->setCode(BigDecimalGreaterThanOrEqual::LESS_THAN_THRESHOLD_ERROR)
                 ->addViolation();
         }
     }
