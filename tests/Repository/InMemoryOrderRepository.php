@@ -24,9 +24,9 @@ final class InMemoryOrderRepository implements OrderRepositoryInterface
     public function save(Order $order): void
     {
         $key = $this->key($order->partnerId, $order->orderId);
-        // Mirrors Doctrine UoW: flushing a managed (already-tracked) entity is not a
-        // duplicate — it just persists the pending changes. Only reject when a *different*
-        // object is stored under the same key (i.e. an unmanaged entity with a colliding key).
+        // Same-instance identity check: re-saving the previously stored object is a no-op
+        // (mirrors Doctrine `persist` + `flush` on a managed entity). A *different* object
+        // colliding on the same composite key still throws.
         if (isset($this->orders[$key]) && $this->orders[$key] !== $order) {
             throw new DuplicateOrderException($order->partnerId, $order->orderId);
         }
