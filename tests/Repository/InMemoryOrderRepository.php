@@ -16,6 +16,8 @@ use App\Repository\OrderRepositoryInterface;
  */
 final class InMemoryOrderRepository implements OrderRepositoryInterface
 {
+    /** @var list<array{partnerId: string, orderId: string}> */
+    public private(set) array $lookupCalls = [];
     /** @var array<string, Order> */
     private array $orders = [];
 
@@ -30,6 +32,8 @@ final class InMemoryOrderRepository implements OrderRepositoryInterface
 
     public function findByCompositeKey(string $partnerId, string $orderId): ?Order
     {
+        $this->lookupCalls[] = ['partnerId' => $partnerId, 'orderId' => $orderId];
+
         return $this->orders[$this->key($partnerId, $orderId)] ?? null;
     }
 

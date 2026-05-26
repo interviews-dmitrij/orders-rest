@@ -109,4 +109,36 @@ final class OrderCreatorTest extends TestCase
         self::assertSame('499.00', (string) $order->totalValue);
         self::assertSame('9.90', (string) $product->price);
     }
+
+    public function testChecksRepositoryForExistingOrderBeforeConstructingEntities(): void
+    {
+        $repository = new InMemoryOrderRepository();
+        $creator = new OrderCreator($repository);
+        $request = $this->orderRequest('ORD-EARLY');
+        $creator->create('PARTNER_A', $request);
+
+        try {
+            $creator->create('PARTNER_A', $request);
+            self::fail('expected DuplicateOrderException');
+        } catch (DuplicateOrderException) {
+            self::assertSame(
+                [
+                    ['partnerId' => 'PARTNER_A', 'orderId' => 'ORD-EARLY'],
+                    ['partnerId' => 'PARTNER_A', 'orderId' => 'ORD-EARLY'],
+                ],
+                $repository->lookupCalls,
+                'each create() call must lookup before deciding to persist',
+            );
+        }
+    }
+
+    private function orderRequest(string $orderId): CreateOrderRequest
+    {
+        return new CreateOrderRequest(
+            orderId: $orderId,
+            expectedDeliveryDate: new DateTimeImmutable('2026-06-15'),
+            totalValue: '100.00',
+            products: [new CreateOrderProductRequest('SKU-1', 'Item', '100.00', 1)],
+        );
+    }
 }

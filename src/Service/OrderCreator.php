@@ -24,6 +24,10 @@ final class OrderCreator
      */
     public function create(string $partnerId, CreateOrderRequest $request): Order
     {
+        if (null !== $this->orderRepository->findByCompositeKey($partnerId, $request->orderId)) {
+            throw new DuplicateOrderException($partnerId, $request->orderId);
+        }
+
         $totalValue = BigDecimal::of($request->totalValue)->toScale(2);
 
         $order = new Order(
