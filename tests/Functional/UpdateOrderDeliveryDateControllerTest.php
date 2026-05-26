@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Entity\Order;
+use App\Entity\OrderAuditLog;
 use App\Repository\OrderRepositoryInterface;
+use App\UserContext\MockUserContext;
 use Brick\Math\BigDecimal;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
@@ -135,6 +138,32 @@ final class UpdateOrderDeliveryDateControllerTest extends WebTestCase
         $persisted = self::loadPersisted();
         self::assertNotNull($persisted);
         self::assertSame('2026-07-20', $persisted->expectedDeliveryDate->format('Y-m-d'), 'idempotent PUTs must converge in DB, not only in the response body');
+    }
+
+    public function testWritesAuditLogRowAfterDeliveryDatePut(): void
+    {
+        $this->seedOrder();
+
+        $this->client->jsonRequest(
+            'PUT',
+            self::updatePath(self::ORDER_ID),
+            ['expectedDeliveryDate' => '2026-07-20'],
+        );
+
+        self::assertResponseStatusCodeSame(200);
+
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $logs = $entityManager->getRepository(OrderAuditLog::class)
+            ->findBy(['partnerId' => self::PARTNER_ID, 'orderIdValue' => self::ORDER_ID]);
+
+        self::assertCount(1, $logs);
+        $log = $logs[0];
+        self::assertSame('delivery_date_changed', $log->eventType);
+        self::assertSame(MockUserContext::MOCK_USER_ID, $log->actorUserId);
+        self::assertSame(
+            ['expectedDeliveryDate' => ['old' => '2026-06-15', 'new' => '2026-07-20']],
+            $log->changes,
+        );
     }
 
     /**
