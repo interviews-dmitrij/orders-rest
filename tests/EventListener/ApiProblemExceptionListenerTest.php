@@ -7,6 +7,7 @@ namespace App\Tests\EventListener;
 use App\EventListener\ApiProblemExceptionListener;
 use App\Exception\DuplicateOrderException;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
@@ -137,6 +138,27 @@ final class ApiProblemExceptionListenerTest extends TestCase
         self::assertSame('Unsupported Media Type', $body['title']);
         self::assertSame(415, $body['status']);
         self::assertStringContainsString('text/plain', $body['detail']);
+    }
+
+    public function testMapsUnknownThrowableToInternalServerError(): void
+    {
+        $listener = new ApiProblemExceptionListener(self::PROBLEM_BASE);
+        $exception = new RuntimeException('database connection refused');
+        $event = $this->event('/api/v1/partners/PARTNER_A/orders', $exception);
+
+        $listener->onKernelException($event);
+
+        $response = $event->getResponse();
+        self::assertInstanceOf(JsonResponse::class, $response);
+        self::assertSame(500, $response->getStatusCode());
+        self::assertSame('application/problem+json', $response->headers->get('Content-Type'));
+
+        /** @var array{type: string, title: string, status: int, detail: string} $body */
+        $body = self::decode($response);
+        self::assertSame(self::PROBLEM_BASE . '/internal-server-error', $body['type']);
+        self::assertSame('Internal Server Error', $body['title']);
+        self::assertSame(500, $body['status']);
+        self::assertStringNotContainsString('database connection refused', $body['detail'], 'must not leak raw exception message');
     }
 
     private function event(string $uri, Throwable $exception): ExceptionEvent

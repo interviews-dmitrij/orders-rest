@@ -42,7 +42,17 @@ final class ApiProblemExceptionListener
 
         if ($exception instanceof HttpExceptionInterface) {
             $event->setResponse($this->fromHttpException($exception, $instance));
+
+            return;
         }
+
+        $event->setResponse($this->problemResponse(
+            slug: 'internal-server-error',
+            title: 'Internal Server Error',
+            status: 500,
+            detail: 'An unexpected error occurred.',
+            instance: $instance,
+        ));
     }
 
     private function fromApiProblem(ApiProblemInterface $exception, string $instance): JsonResponse
