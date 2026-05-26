@@ -66,6 +66,28 @@ final class UpdateOrderDeliveryDateControllerTest extends WebTestCase
         self::assertSame(404, $problem['status']);
     }
 
+    /**
+     * Partner isolation: order belongs to PARTNER_A but PARTNER_B tries to update it.
+     * Composite-key lookup must refuse the cross-partner request — protects the partner
+     * namespace from horizontal data access if `findByCompositeKey` ever degrades.
+     */
+    public function testReturnsFourOhFourOnCrossPartnerUpdateAttempt(): void
+    {
+        $this->seedOrder();
+
+        $this->client->jsonRequest(
+            'PUT',
+            \sprintf('/api/v1/partners/PARTNER_OTHER/orders/%s/delivery-date', self::ORDER_ID),
+            ['expectedDeliveryDate' => '2026-07-20'],
+        );
+
+        self::assertResponseStatusCodeSame(404);
+
+        $original = self::loadPersisted();
+        self::assertNotNull($original);
+        self::assertSame('2026-06-15', $original->expectedDeliveryDate->format('Y-m-d'), 'cross-partner call must not touch the original order');
+    }
+
     public function testRejectsMissingExpectedDeliveryDateWithFieldLevelProblemDetail(): void
     {
         $this->seedOrder();
@@ -109,6 +131,10 @@ final class UpdateOrderDeliveryDateControllerTest extends WebTestCase
 
         self::assertSame($first['expectedDeliveryDate'], $second['expectedDeliveryDate']);
         self::assertSame($first['orderId'], $second['orderId']);
+
+        $persisted = self::loadPersisted();
+        self::assertNotNull($persisted);
+        self::assertSame('2026-07-20', $persisted->expectedDeliveryDate->format('Y-m-d'), 'idempotent PUTs must converge in DB, not only in the response body');
     }
 
     /**
