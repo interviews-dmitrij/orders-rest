@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\EventListener;
 
 use App\Exception\ApiProblemInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
@@ -16,12 +15,6 @@ use Throwable;
 #[AsEventListener(event: 'kernel.exception')]
 final class ApiProblemExceptionListener
 {
-    public function __construct(
-        #[Autowire(env: 'PROBLEM_TYPE_BASE_URI')]
-        private readonly string $problemBaseUri,
-    ) {
-    }
-
     public function onKernelException(ExceptionEvent $event): void
     {
         $exception = $event->getThrowable();
@@ -118,7 +111,7 @@ final class ApiProblemExceptionListener
         array $extra = [],
     ): JsonResponse {
         $body = [
-            'type' => rtrim($this->problemBaseUri, '/') . '/' . $slug,
+            'type' => $slug,
             'title' => $title,
             'status' => $status,
             'detail' => $detail,

@@ -28,11 +28,9 @@ use const JSON_THROW_ON_ERROR;
 
 final class ApiProblemExceptionListenerTest extends TestCase
 {
-    private const PROBLEM_BASE = 'https://api.test/problems';
-
     public function testMapsApiProblemExceptionToRfc7807Response(): void
     {
-        $listener = new ApiProblemExceptionListener(self::PROBLEM_BASE);
+        $listener = new ApiProblemExceptionListener();
         $exception = new DuplicateOrderException('PARTNER_A', 'ORD-001');
         $event = $this->event('/api/v1/partners/PARTNER_A/orders', $exception);
 
@@ -45,7 +43,7 @@ final class ApiProblemExceptionListenerTest extends TestCase
 
         /** @var array{type: string, title: string, status: int, detail: string, instance: string} $body */
         $body = self::decode($response);
-        self::assertSame(self::PROBLEM_BASE . '/duplicate-order', $body['type']);
+        self::assertSame('duplicate-order', $body['type']);
         self::assertSame('Duplicate Order', $body['title']);
         self::assertSame(409, $body['status']);
         self::assertSame('/api/v1/partners/PARTNER_A/orders', $body['instance']);
@@ -54,7 +52,7 @@ final class ApiProblemExceptionListenerTest extends TestCase
 
     public function testMapsValidationFailedToRfc7807ValidationProblem(): void
     {
-        $listener = new ApiProblemExceptionListener(self::PROBLEM_BASE);
+        $listener = new ApiProblemExceptionListener();
         $violations = new ConstraintViolationList([
             $this->violation('This value should not be blank.', 'orderId'),
             $this->violation('This collection should contain 1 element or more.', 'products'),
@@ -72,7 +70,7 @@ final class ApiProblemExceptionListenerTest extends TestCase
 
         /** @var array{type: string, title: string, status: int, errors: list<array{pointer: string, message: string}>} $body */
         $body = self::decode($response);
-        self::assertSame(self::PROBLEM_BASE . '/validation-failed', $body['type']);
+        self::assertSame('validation-failed', $body['type']);
         self::assertSame('Validation Failed', $body['title']);
         self::assertSame(422, $body['status']);
         self::assertSame(
@@ -95,7 +93,7 @@ final class ApiProblemExceptionListenerTest extends TestCase
             ]),
         );
         $outer = new HttpException(422, 'Validation failed', $inner);
-        $listener = new ApiProblemExceptionListener(self::PROBLEM_BASE);
+        $listener = new ApiProblemExceptionListener();
         $event = $this->event('/api/v1/partners/PARTNER_A/orders', $outer);
 
         $listener->onKernelException($event);
@@ -106,7 +104,7 @@ final class ApiProblemExceptionListenerTest extends TestCase
 
         /** @var array{type: string, title: string, errors: list<array{pointer: string, message: string}>} $body */
         $body = self::decode($response);
-        self::assertSame(self::PROBLEM_BASE . '/validation-failed', $body['type']);
+        self::assertSame('validation-failed', $body['type']);
         self::assertSame('Validation Failed', $body['title']);
         self::assertSame(
             [['pointer' => '/orderId', 'message' => 'This value should not be blank.']],
@@ -144,7 +142,7 @@ final class ApiProblemExceptionListenerTest extends TestCase
         string $expectedSlug,
         string $expectedTitle,
     ): void {
-        $listener = new ApiProblemExceptionListener(self::PROBLEM_BASE);
+        $listener = new ApiProblemExceptionListener();
         $event = $this->event('/api/v1/partners/PARTNER_A/orders', $exception);
 
         $listener->onKernelException($event);
@@ -156,14 +154,14 @@ final class ApiProblemExceptionListenerTest extends TestCase
 
         /** @var array{type: string, title: string, status: int} $body */
         $body = self::decode($response);
-        self::assertSame(self::PROBLEM_BASE . '/' . $expectedSlug, $body['type']);
+        self::assertSame($expectedSlug, $body['type']);
         self::assertSame($expectedTitle, $body['title']);
         self::assertSame($expectedStatus, $body['status']);
     }
 
     public function testMapsUnknownThrowableToInternalServerError(): void
     {
-        $listener = new ApiProblemExceptionListener(self::PROBLEM_BASE);
+        $listener = new ApiProblemExceptionListener();
         $exception = new RuntimeException('database connection refused');
         $event = $this->event('/api/v1/partners/PARTNER_A/orders', $exception);
 
@@ -176,7 +174,7 @@ final class ApiProblemExceptionListenerTest extends TestCase
 
         /** @var array{type: string, title: string, status: int, detail: string} $body */
         $body = self::decode($response);
-        self::assertSame(self::PROBLEM_BASE . '/internal-server-error', $body['type']);
+        self::assertSame('internal-server-error', $body['type']);
         self::assertSame('Internal Server Error', $body['title']);
         self::assertSame(500, $body['status']);
         self::assertStringNotContainsString('database connection refused', $body['detail'], 'must not leak raw exception message');
@@ -184,7 +182,7 @@ final class ApiProblemExceptionListenerTest extends TestCase
 
     public function testForwardsHeadersFromHttpExceptionToProblemResponse(): void
     {
-        $listener = new ApiProblemExceptionListener(self::PROBLEM_BASE);
+        $listener = new ApiProblemExceptionListener();
         $exception = new MethodNotAllowedHttpException(['POST']);
         $event = $this->event('/api/v1/partners/PARTNER_A/orders', $exception);
 

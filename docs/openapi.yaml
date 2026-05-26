@@ -335,8 +335,8 @@ components:
       properties:
         type:
           type: string
-          format: uri
-          examples: ["https://api.example.test/problems/validation-failed"]
+          format: uri-reference
+          examples: ["validation-failed"]
         title:
           type: string
           examples: ["Validation Failed"]
@@ -387,7 +387,7 @@ components:
           examples:
             malformed-json:
               value:
-                type: "https://api.example.test/problems/malformed-json"
+                type: "malformed-json"
                 title: "Malformed JSON"
                 status: 400
                 detail: "The request body could not be parsed as JSON."
@@ -402,7 +402,7 @@ components:
           examples:
             order-not-found:
               value:
-                type: "https://api.example.test/problems/order-not-found"
+                type: "order-not-found"
                 title: "Order Not Found"
                 status: 404
                 detail: "No order exists with partnerId=PARTNER_A and orderId=ORD-9999."
@@ -428,7 +428,7 @@ components:
           examples:
             method-not-allowed:
               value:
-                type: "https://api.example.test/problems/method-not-allowed"
+                type: "method-not-allowed"
                 title: "Method Not Allowed"
                 status: 405
                 detail: "The HTTP method DELETE is not allowed on this path."
@@ -443,7 +443,7 @@ components:
           examples:
             duplicate-order:
               value:
-                type: "https://api.example.test/problems/duplicate-order"
+                type: "duplicate-order"
                 title: "Duplicate Order"
                 status: 409
                 detail: "An order with partnerId=PARTNER_A and orderId=ORD-2026-00001 already exists."
@@ -458,7 +458,7 @@ components:
           examples:
             unsupported-media-type:
               value:
-                type: "https://api.example.test/problems/unsupported-media-type"
+                type: "unsupported-media-type"
                 title: "Unsupported Media Type"
                 status: 415
                 detail: "The request Content-Type is not supported. Use application/json."
@@ -473,7 +473,7 @@ components:
           examples:
             multiple-field-errors:
               value:
-                type: "https://api.example.test/problems/validation-failed"
+                type: "validation-failed"
                 title: "Validation Failed"
                 status: 422
                 detail: "One or more fields failed validation."
@@ -487,7 +487,7 @@ components:
                     message: "This value is not a valid date."
             empty-products:
               value:
-                type: "https://api.example.test/problems/validation-failed"
+                type: "validation-failed"
                 title: "Validation Failed"
                 status: 422
                 detail: "One or more fields failed validation."
@@ -505,7 +505,7 @@ components:
           examples:
             internal-server-error:
               value:
-                type: "https://api.example.test/problems/internal-server-error"
+                type: "internal-server-error"
                 title: "Internal Server Error"
                 status: 500
                 detail: "An unexpected error occurred. Please contact support if the issue persists."
