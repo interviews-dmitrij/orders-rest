@@ -6,7 +6,7 @@ namespace App\Controller\Api\V1;
 
 use App\Dto\Request\CreateOrderRequest;
 use App\Dto\Response\OrderResponse;
-use App\Service\OrderCreator;
+use App\Service\CreateOrderHandler;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -15,7 +15,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class CreateOrderController
 {
     public function __construct(
-        private readonly OrderCreator $creator,
+        private readonly CreateOrderHandler $handler,
     ) {
     }
 
@@ -33,7 +33,7 @@ final class CreateOrderController
         )]
         CreateOrderRequest $request,
     ): JsonResponse {
-        $order = $this->creator->create($partnerId, $request);
+        $order = $this->handler->create($partnerId, $request);
 
         return new JsonResponse(
             OrderResponse::fromEntity($order),

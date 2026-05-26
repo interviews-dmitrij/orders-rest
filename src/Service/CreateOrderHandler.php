@@ -12,7 +12,7 @@ use App\Repository\OrderRepositoryInterface;
 use Brick\Math\BigDecimal;
 use DateTimeImmutable;
 
-final class OrderCreator
+final class CreateOrderHandler
 {
     public function __construct(
         private readonly OrderRepositoryInterface $orderRepository,

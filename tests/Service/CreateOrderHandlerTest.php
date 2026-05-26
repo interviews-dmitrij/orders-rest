@@ -7,17 +7,17 @@ namespace App\Tests\Service;
 use App\Dto\Request\CreateOrderProductRequest;
 use App\Dto\Request\CreateOrderRequest;
 use App\Exception\DuplicateOrderException;
-use App\Service\OrderCreator;
+use App\Service\CreateOrderHandler;
 use App\Tests\Repository\InMemoryOrderRepository;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
-final class OrderCreatorTest extends TestCase
+final class CreateOrderHandlerTest extends TestCase
 {
     public function testCreatesAndPersistsOrderWithSingleProduct(): void
     {
         $repository = new InMemoryOrderRepository();
-        $creator = new OrderCreator($repository);
+        $handler = new CreateOrderHandler($repository);
         $request = new CreateOrderRequest(
             orderId: 'ORD-2026-00001',
             expectedDeliveryDate: new DateTimeImmutable('2026-06-15'),
@@ -32,7 +32,7 @@ final class OrderCreatorTest extends TestCase
             ],
         );
 
-        $order = $creator->create('PARTNER_A', $request);
+        $order = $handler->create('PARTNER_A', $request);
 
         self::assertSame('PARTNER_A', $order->partnerId);
         self::assertSame('ORD-2026-00001', $order->orderId);
@@ -45,7 +45,7 @@ final class OrderCreatorTest extends TestCase
 
     public function testCreatesOrderWithMultipleProductsLinkedBackToTheOrder(): void
     {
-        $creator = new OrderCreator(new InMemoryOrderRepository());
+        $handler = new CreateOrderHandler(new InMemoryOrderRepository());
         $request = new CreateOrderRequest(
             orderId: 'ORD-2026-00002',
             expectedDeliveryDate: new DateTimeImmutable('2026-06-20'),
@@ -57,7 +57,7 @@ final class OrderCreatorTest extends TestCase
             ],
         );
 
-        $order = $creator->create('PARTNER_B', $request);
+        $order = $handler->create('PARTNER_B', $request);
 
         self::assertCount(3, $order->products);
         $skus = [];
@@ -79,22 +79,22 @@ final class OrderCreatorTest extends TestCase
 
     public function testRejectsDuplicateCompositeKey(): void
     {
-        $creator = new OrderCreator(new InMemoryOrderRepository());
+        $handler = new CreateOrderHandler(new InMemoryOrderRepository());
         $request = new CreateOrderRequest(
             orderId: 'ORD-DUP',
             expectedDeliveryDate: new DateTimeImmutable('2026-06-15'),
             totalValue: '100.00',
             products: [new CreateOrderProductRequest('SKU-1', 'Item', '100.00', 1)],
         );
-        $creator->create('PARTNER_A', $request);
+        $handler->create('PARTNER_A', $request);
 
         $this->expectException(DuplicateOrderException::class);
-        $creator->create('PARTNER_A', $request);
+        $handler->create('PARTNER_A', $request);
     }
 
     public function testNormalizesTotalAndPriceToScaleTwo(): void
     {
-        $creator = new OrderCreator(new InMemoryOrderRepository());
+        $handler = new CreateOrderHandler(new InMemoryOrderRepository());
         $request = new CreateOrderRequest(
             orderId: 'ORD-SCALE',
             expectedDeliveryDate: new DateTimeImmutable('2026-06-15'),
@@ -102,7 +102,7 @@ final class OrderCreatorTest extends TestCase
             products: [new CreateOrderProductRequest('SKU-1', 'Item', '9.9', 1)],
         );
 
-        $order = $creator->create('PARTNER_A', $request);
+        $order = $handler->create('PARTNER_A', $request);
 
         $product = $order->products->first();
         self::assertNotFalse($product);
@@ -113,12 +113,12 @@ final class OrderCreatorTest extends TestCase
     public function testChecksRepositoryForExistingOrderBeforeConstructingEntities(): void
     {
         $repository = new InMemoryOrderRepository();
-        $creator = new OrderCreator($repository);
+        $handler = new CreateOrderHandler($repository);
         $request = $this->orderRequest('ORD-EARLY');
-        $creator->create('PARTNER_A', $request);
+        $handler->create('PARTNER_A', $request);
 
         try {
-            $creator->create('PARTNER_A', $request);
+            $handler->create('PARTNER_A', $request);
             self::fail('expected DuplicateOrderException');
         } catch (DuplicateOrderException) {
             self::assertSame(
