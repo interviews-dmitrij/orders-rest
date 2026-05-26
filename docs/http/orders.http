@@ -1,0 +1,170 @@
+###
+# Manual HTTP requests against the Orders REST API.
+#
+# VS Code: install the "REST Client" extension (humao.rest-client). A workspace
+# recommendation is registered in .vscode/extensions.json so VS Code will
+# prompt on open. JetBrains IDEs run .http files out of the box.
+#
+# Start the API locally first:
+#   symfony serve -d
+#
+# Click "Send Request" above each block (VS Code) or press Ctrl/Cmd+Enter
+# inside the block (JetBrains).
+###
+
+@baseUrl    = http://127.0.0.1:8000
+@partnerId  = PARTNER_A
+@orderId    = ORD-2026-00001
+
+
+### Create order — happy path (two product lines)
+POST {{baseUrl}}/api/v1/partners/{{partnerId}}/orders
+Content-Type: application/json
+
+< ../examples/create-order.request.json
+
+
+### Create order — happy path (single product line)
+POST {{baseUrl}}/api/v1/partners/{{partnerId}}/orders
+Content-Type: application/json
+
+{
+  "orderId": "ORD-2026-00002",
+  "expectedDeliveryDate": "2026-06-20",
+  "totalValue": "499.00",
+  "products": [
+    {
+      "productId": "SKU-005",
+      "name": "Mechanical Keyboard",
+      "price": "499.00",
+      "quantity": 1
+    }
+  ]
+}
+
+
+### Create order — 409 Conflict (re-submit the first body)
+POST {{baseUrl}}/api/v1/partners/{{partnerId}}/orders
+Content-Type: application/json
+
+< ../examples/create-order.request.json
+
+
+### Create order — 422, empty products array
+POST {{baseUrl}}/api/v1/partners/{{partnerId}}/orders
+Content-Type: application/json
+
+{
+  "orderId": "ORD-2026-EMPTY",
+  "expectedDeliveryDate": "2026-06-15",
+  "totalValue": "0.00",
+  "products": []
+}
+
+
+### Create order — 422, invalid totalValue format
+POST {{baseUrl}}/api/v1/partners/{{partnerId}}/orders
+Content-Type: application/json
+
+{
+  "orderId": "ORD-2026-BADTOTAL",
+  "expectedDeliveryDate": "2026-06-15",
+  "totalValue": "1,299.99",
+  "products": [
+    {
+      "productId": "SKU-001",
+      "name": "Bluetooth Headphones",
+      "price": "129.99",
+      "quantity": 2
+    }
+  ]
+}
+
+
+### Create order — 422, unknown field (additionalProperties=false)
+POST {{baseUrl}}/api/v1/partners/{{partnerId}}/orders
+Content-Type: application/json
+
+{
+  "orderId": "ORD-2026-EXTRA",
+  "expectedDeliveryDate": "2026-06-15",
+  "totalValue": "100.00",
+  "currency": "CZK",
+  "products": [
+    {
+      "productId": "SKU-001",
+      "name": "Headphones",
+      "price": "100.00",
+      "quantity": 1
+    }
+  ]
+}
+
+
+### Create order — 422, quantity below minimum
+POST {{baseUrl}}/api/v1/partners/{{partnerId}}/orders
+Content-Type: application/json
+
+{
+  "orderId": "ORD-2026-ZEROQTY",
+  "expectedDeliveryDate": "2026-06-15",
+  "totalValue": "0.00",
+  "products": [
+    {
+      "productId": "SKU-001",
+      "name": "Headphones",
+      "price": "100.00",
+      "quantity": 0
+    }
+  ]
+}
+
+
+### Create order — 400 Malformed JSON
+POST {{baseUrl}}/api/v1/partners/{{partnerId}}/orders
+Content-Type: application/json
+
+{ "orderId": "broken-json",
+
+
+### Create order — 415 Unsupported Media Type
+POST {{baseUrl}}/api/v1/partners/{{partnerId}}/orders
+Content-Type: text/plain
+
+orderId=ORD-2026-NOTJSON
+
+
+### Update delivery date — happy path
+PUT {{baseUrl}}/api/v1/partners/{{partnerId}}/orders/{{orderId}}/delivery-date
+Content-Type: application/json
+
+< ../examples/update-delivery-date.request.json
+
+
+### Update delivery date — 404, unknown order
+PUT {{baseUrl}}/api/v1/partners/{{partnerId}}/orders/ORD-DOES-NOT-EXIST/delivery-date
+Content-Type: application/json
+
+{
+  "expectedDeliveryDate": "2026-07-01"
+}
+
+
+### Update delivery date — 422, invalid date format
+PUT {{baseUrl}}/api/v1/partners/{{partnerId}}/orders/{{orderId}}/delivery-date
+Content-Type: application/json
+
+{
+  "expectedDeliveryDate": "01-07-2026"
+}
+
+
+### Update delivery date — 415, wrong Content-Type
+PUT {{baseUrl}}/api/v1/partners/{{partnerId}}/orders/{{orderId}}/delivery-date
+Content-Type: application/xml
+
+<delivery><date>2026-07-01</date></delivery>
+
+
+### 405 Method Not Allowed — DELETE on the orders collection
+DELETE {{baseUrl}}/api/v1/partners/{{partnerId}}/orders
