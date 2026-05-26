@@ -98,36 +98,12 @@ final class ApiProblemExceptionListener
             instance: $instance,
         );
         foreach ($exception->getHeaders() as $name => $value) {
-            $response->headers->set($name, self::normalizeHeaderValue($value));
+            if (\is_string($name) && \is_string($value)) {
+                $response->headers->set($name, $value);
+            }
         }
 
         return $response;
-    }
-
-    /**
-     * Normalizes a header value produced by `HttpExceptionInterface::getHeaders()`
-     * (whose return type is untyped `array`) into the shape the `ResponseHeaderBag`
-     * accepts. Non-string list entries are dropped rather than silently coerced.
-     *
-     * @return string|array<string>|null
-     */
-    private static function normalizeHeaderValue(mixed $value): string|array|null
-    {
-        if (null === $value || \is_string($value)) {
-            return $value;
-        }
-        if (\is_array($value)) {
-            $normalized = [];
-            foreach ($value as $item) {
-                if (\is_string($item)) {
-                    $normalized[] = $item;
-                }
-            }
-
-            return $normalized;
-        }
-
-        return null;
     }
 
     /**

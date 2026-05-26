@@ -81,6 +81,6 @@ final class BigDecimalTypeTest extends TestCase
         $restored = $this->type->convertToPHPValue($db, $this->platform);
 
         self::assertInstanceOf(BigDecimal::class, $restored);
-        self::assertTrue($original->isEqualTo($restored), 'BigDecimal round-trip must preserve value');
+        self::assertSame((string) $original, (string) $restored, 'BigDecimal round-trip must preserve string representation');
     }
 }
