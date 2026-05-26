@@ -10,6 +10,7 @@ doctrine:
 
         types:
             uuid: Symfony\Bridge\Doctrine\Types\UuidType
+            bigdecimal: App\Doctrine\Type\BigDecimalType
     orm:
         validate_xml_mapping: true
         naming_strategy: doctrine.orm.naming_strategy.underscore
