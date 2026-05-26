@@ -81,26 +81,6 @@ Content-Type: application/json
 }
 
 
-### Create order — 422, unknown field (additionalProperties=false)
-POST {{baseUrl}}/api/v1/partners/{{partnerId}}/orders
-Content-Type: application/json
-
-{
-  "orderId": "ORD-2026-EXTRA",
-  "expectedDeliveryDate": "2026-06-15",
-  "totalValue": "100.00",
-  "currency": "CZK",
-  "products": [
-    {
-      "productId": "SKU-001",
-      "name": "Headphones",
-      "price": "100.00",
-      "quantity": 1
-    }
-  ]
-}
-
-
 ### Create order — 422, quantity below minimum
 POST {{baseUrl}}/api/v1/partners/{{partnerId}}/orders
 Content-Type: application/json

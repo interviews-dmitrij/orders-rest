@@ -4,11 +4,9 @@ info:
   title: Orders REST API
   summary: Partner-facing REST API for submitting and updating orders.
   description: |
-    REST API for partners (shops) to submit orders and update an order's expected
-    delivery date.
+    REST API for partners (shops) to submit orders and update an order's expected delivery date.
 
     - Composite key `(partnerId, orderId)` is unique; duplicate submissions return `409 Conflict`.
-    - Monetary amounts are decimal strings.
     - Dates are ISO-8601 (`YYYY-MM-DD`); timestamps are RFC 3339 in UTC.
     - Errors follow RFC 7807 (`application/problem+json`).
   version: 1.0.0
@@ -33,7 +31,6 @@ paths:
       tags: [Orders]
       summary: Create an order under a partner.
       description: |
-        `partnerId` comes from the URL and must not appear in the body.
         Duplicate `(partnerId, orderId)` returns `409 Conflict`.
       requestBody:
         required: true
@@ -304,7 +301,6 @@ components:
         - expectedDeliveryDate
         - totalValue
         - products
-      additionalProperties: false
 
     CreateOrderProductRequest:
       type: object
@@ -330,7 +326,6 @@ components:
           maximum: 1000000
           examples: [2]
       required: [productId, name, price, quantity]
-      additionalProperties: false
 
     UpdateOrderDeliveryDateRequest:
       type: object
@@ -341,7 +336,6 @@ components:
           format: date
           examples: ["2026-07-01"]
       required: [expectedDeliveryDate]
-      additionalProperties: false
 
     ProblemDetails:
       type: object
@@ -509,16 +503,6 @@ components:
                 errors:
                   - pointer: "/products"
                     message: "This collection should contain 1 element or more."
-            unknown-field:
-              value:
-                type: "https://api.example.test/problems/validation-failed"
-                title: "Validation Failed"
-                status: 422
-                detail: "One or more fields failed validation."
-                instance: "/api/v1/partners/PARTNER_A/orders"
-                errors:
-                  - pointer: "/currency"
-                    message: "This field was not expected."
 
     InternalServerError:
       description: Unexpected server error.
