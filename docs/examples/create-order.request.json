@@ -1,0 +1,19 @@
+{
+    "orderId": "ORD-2026-00001",
+    "expectedDeliveryDate": "2026-06-15",
+    "totalValue": "1299.99",
+    "products": [
+        {
+            "productId": "SKU-001",
+            "name": "Bluetooth Headphones",
+            "price": "129.99",
+            "quantity": 2
+        },
+        {
+            "productId": "SKU-002",
+            "name": "USB-C Cable, 2 m",
+            "price": "9.99",
+            "quantity": 4
+        }
+    ]
+}

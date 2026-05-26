@@ -1,0 +1,131 @@
+# Spectral ruleset for docs/openapi.yaml.
+#
+# Invoke:
+#   npx --yes @stoplight/spectral-cli lint docs/openapi.yaml
+#
+# Extends spectral:oas at full strictness (`all`, not just `recommended`) and layers
+# project-specific rules aligned with CODESTYLE.md §10.5 (URL design) and
+# CLAUDE.md §8 (OpenAPI conventions).
+
+extends:
+  - [spectral:oas, all]
+
+rules:
+  # ----- spectral:oas overrides --------------------------------------------
+
+  # operationId is mandatory and unique (drives codegen, log correlation, link tooling).
+  operation-operationId: error
+  operation-operationId-unique: error
+  operation-operationId-valid-in-url: error
+
+  # Tag discipline.
+  operation-tag-defined: error
+  openapi-tags: error
+  openapi-tags-uniqueness: error
+
+  # Top-level info object completeness.
+  info-description: error
+  info-contact: warn
+
+  # For a private API where the provider-consumer relationship is established
+  # out-of-band, license declaration and the full contact triple are SPDX-style
+  # nice-to-haves; demote to "off".
+  info-license: off
+  license-url: off
+  contact-properties: off
+
+  # Path hygiene.
+  path-keys-no-trailing-slash: error
+  path-not-include-query: error
+  path-params: error
+  path-declarations-must-exist: error
+
+  # Examples must validate against their schemas.
+  oas3-valid-media-example: error
+  oas3-valid-schema-example: error
+
+  # Server hygiene.
+  oas3-server-trailing-slash: error
+
+  # ----- Project-specific rules --------------------------------------------
+
+  # Static path segments must be lowercase kebab-case. Path parameters (`{name}`) and
+  # version prefixes (e.g. `v1`, `v2`) are allowed alongside kebab-case nouns.
+  # See CODESTYLE.md §10.5.
+  path-segments-kebab-case:
+    description: Static path segments must be lowercase kebab-case; path parameters and version prefixes are allowed.
+    message: "Path '{{value}}' contains a non-kebab-case segment."
+    severity: error
+    formats: [oas3]
+    given: $.paths
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        match: "^(/([a-z][a-z0-9-]*|\\{[a-zA-Z0-9_]+\\}))+$"
+
+  # Every reusable schema component must have a description (docs UX).
+  schema-component-has-description:
+    description: Every schema under components.schemas must have a description.
+    message: "Schema '{{property}}' is missing a description."
+    severity: warn
+    formats: [oas3]
+    given: $.components.schemas[*]
+    then:
+      field: description
+      function: truthy
+
+  # Every reusable parameter component must have a description.
+  parameter-component-has-description:
+    description: Every parameter under components.parameters must have a description.
+    message: "Parameter '{{property}}' is missing a description."
+    severity: warn
+    formats: [oas3]
+    given: $.components.parameters[*]
+    then:
+      field: description
+      function: truthy
+
+  # Reusable response components must have a description (OAS requires it; we elevate
+  # the severity to error to make it explicit).
+  response-component-has-description:
+    description: Every reusable response under components.responses must have a description.
+    severity: error
+    formats: [oas3]
+    given: $.components.responses[*]
+    then:
+      field: description
+      function: truthy
+
+  # Every operation must have a summary (CLAUDE.md §8).
+  operation-summary-required:
+    description: Every operation must have a summary.
+    message: "Operation at '{{path}}' is missing a summary."
+    severity: error
+    formats: [oas3]
+    given: "$.paths[*][get,post,put,patch,delete,options,head]"
+    then:
+      field: summary
+      function: truthy
+
+  # Every operation should have a description (looser; warn).
+  operation-description-required:
+    description: Every operation should have a description.
+    message: "Operation at '{{path}}' is missing a description."
+    severity: warn
+    formats: [oas3]
+    given: "$.paths[*][get,post,put,patch,delete,options,head]"
+    then:
+      field: description
+      function: truthy
+
+  # Every operation should declare at least one tag (UI grouping).
+  operation-tag-required:
+    description: Every operation must declare at least one tag.
+    message: "Operation at '{{path}}' is missing tags."
+    severity: error
+    formats: [oas3]
+    given: "$.paths[*][get,post,put,patch,delete,options,head]"
+    then:
+      field: tags
+      function: truthy
