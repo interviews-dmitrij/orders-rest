@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Request;
 
+use App\Validator\Constraints\BigDecimalGreaterThanOrEqual;
 use Brick\Math\BigDecimal;
 use DateTimeImmutable;
 use Symfony\Component\Serializer\Attribute\Context;
@@ -24,6 +25,7 @@ final readonly class CreateOrderRequest
         #[Context([DateTimeNormalizer::FORMAT_KEY => 'Y-m-d'])]
         public DateTimeImmutable $expectedDeliveryDate,
 
+        #[BigDecimalGreaterThanOrEqual('0')]
         public BigDecimal $totalValue,
 
         #[Assert\Count(

@@ -57,6 +57,13 @@ final class BigDecimalNormalizerTest extends TestCase
         self::assertSame('499.00', (string) $result);
     }
 
+    public function testDenormalizesNegativeValuesAsIs(): void
+    {
+        $result = $this->normalizer->denormalize('-5.50', BigDecimal::class);
+
+        self::assertSame('-5.50', (string) $result);
+    }
+
     public function testDenormalizationThrowsOnMalformedString(): void
     {
         $this->expectException(NotNormalizableValueException::class);
@@ -72,9 +79,6 @@ final class BigDecimalNormalizerTest extends TestCase
         yield 'array input' => [['nested' => 'object'], 'numeric string or integer'];
         yield 'float input' => [1.5, 'numeric string or integer'];
         yield 'boolean input' => [true, 'numeric string or integer'];
-        yield 'negative decimal string' => ['-5.00', 'must not be negative'];
-        yield 'negative integer string' => ['-7', 'must not be negative'];
-        yield 'negative integer' => [-5, 'must not be negative'];
     }
 
     #[DataProvider('rejectedInputsWithExpectedMessage')]

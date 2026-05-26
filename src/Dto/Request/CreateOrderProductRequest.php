@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Request;
 
+use App\Validator\Constraints\BigDecimalGreaterThanOrEqual;
 use Brick\Math\BigDecimal;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -18,6 +19,7 @@ final readonly class CreateOrderProductRequest
         #[Assert\Length(min: 1, max: 255)]
         public string $name,
 
+        #[BigDecimalGreaterThanOrEqual('0')]
         public BigDecimal $price,
 
         #[Assert\Range(min: 1, max: 1_000_000)]

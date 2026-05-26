@@ -482,7 +482,7 @@ components:
                   - pointer: "/products/0/quantity"
                     message: "This value should be greater than or equal to 1."
                   - pointer: "/totalValue"
-                    message: "This value is not in the expected format."
+                    message: "This value should be greater than or equal to 0."
                   - pointer: "/expectedDeliveryDate"
                     message: "This value is not a valid date."
             empty-products:

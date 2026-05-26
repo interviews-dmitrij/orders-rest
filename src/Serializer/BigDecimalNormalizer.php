@@ -63,7 +63,7 @@ final class BigDecimalNormalizer implements NormalizerInterface, DenormalizerInt
         }
 
         try {
-            $decimal = $value->toScale(self::MONEY_SCALE, RoundingMode::Unnecessary);
+            return $value->toScale(self::MONEY_SCALE, RoundingMode::Unnecessary);
         } catch (MathException $exception) {
             throw NotNormalizableValueException::createForUnexpectedDataType(
                 'Value has more than ' . self::MONEY_SCALE . ' fractional digits.',
@@ -75,18 +75,6 @@ final class BigDecimalNormalizer implements NormalizerInterface, DenormalizerInt
                 $exception,
             );
         }
-
-        if ($decimal->isNegative()) {
-            throw NotNormalizableValueException::createForUnexpectedDataType(
-                'Value must not be negative.',
-                $data,
-                [BigDecimal::class],
-                $deserializationPath,
-                true,
-            );
-        }
-
-        return $decimal;
     }
 
     public function supportsDenormalization(mixed $data, string $type, ?string $format = null, array $context = []): bool
