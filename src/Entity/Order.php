@@ -59,4 +59,10 @@ final class Order
         $this->createdAt = $createdAt;
         $this->updatedAt = $createdAt;
     }
+
+    public function changeExpectedDeliveryDate(DateTimeImmutable $newDate, DateTimeImmutable $occurredAt): void
+    {
+        $this->expectedDeliveryDate = $newDate;
+        $this->updatedAt = $occurredAt;
+    }
 }
