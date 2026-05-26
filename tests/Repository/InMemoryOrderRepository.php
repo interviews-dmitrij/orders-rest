@@ -40,6 +40,11 @@ final class InMemoryOrderRepository implements OrderRepositoryInterface
         return $this->orders[$this->key($partnerId, $orderId)] ?? null;
     }
 
+    public function wrapInTransaction(callable $action): mixed
+    {
+        return $action();
+    }
+
     public function count(): int
     {
         return \count($this->orders);

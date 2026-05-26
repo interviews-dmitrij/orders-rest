@@ -36,4 +36,9 @@ final class DoctrineOrderRepository extends ServiceEntityRepository implements O
     {
         return $this->findOneBy(['partnerId' => $partnerId, 'orderId' => $orderId]);
     }
+
+    public function wrapInTransaction(callable $action): mixed
+    {
+        return $this->getEntityManager()->wrapInTransaction(static fn (): mixed => $action());
+    }
 }

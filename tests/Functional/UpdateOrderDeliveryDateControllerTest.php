@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Entity\Order;
+use App\Entity\OrderAuditLog;
 use App\Repository\OrderRepositoryInterface;
+use App\UserContext\MockUserContext;
 use Brick\Math\BigDecimal;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
@@ -64,6 +67,7 @@ final class UpdateOrderDeliveryDateControllerTest extends WebTestCase
         $problem = self::decode($this->client->getResponse()->getContent());
         self::assertSame('Order Not Found', $problem['title']);
         self::assertSame(404, $problem['status']);
+        self::assertCount(0, self::loadAuditLogs(), 'failed lookup must not write to the audit log');
     }
 
     /**
@@ -86,6 +90,7 @@ final class UpdateOrderDeliveryDateControllerTest extends WebTestCase
         $original = self::loadPersisted();
         self::assertNotNull($original);
         self::assertSame('2026-06-15', $original->expectedDeliveryDate->format('Y-m-d'), 'cross-partner call must not touch the original order');
+        self::assertCount(0, self::loadAuditLogs(), 'cross-partner attempt must not leak into the audit trail');
     }
 
     public function testRejectsMissingExpectedDeliveryDateWithFieldLevelProblemDetail(): void
@@ -99,6 +104,7 @@ final class UpdateOrderDeliveryDateControllerTest extends WebTestCase
 
         $problem = self::decode($this->client->getResponse()->getContent());
         self::assertContains('/expectedDeliveryDate', array_column(self::errors($problem), 'pointer'));
+        self::assertCount(0, self::loadAuditLogs(), 'validation failure must not write to the audit log');
     }
 
     public function testRejectsMalformedDate(): void
@@ -137,6 +143,31 @@ final class UpdateOrderDeliveryDateControllerTest extends WebTestCase
         self::assertSame('2026-07-20', $persisted->expectedDeliveryDate->format('Y-m-d'), 'idempotent PUTs must converge in DB, not only in the response body');
     }
 
+    public function testWritesAuditLogRowAfterDeliveryDatePut(): void
+    {
+        $this->seedOrder();
+
+        $this->client->jsonRequest(
+            'PUT',
+            self::updatePath(self::ORDER_ID),
+            ['expectedDeliveryDate' => '2026-07-20'],
+        );
+
+        self::assertResponseStatusCodeSame(200);
+
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $logs = $entityManager->getRepository(OrderAuditLog::class)
+            ->findBy(['partnerId' => self::PARTNER_ID, 'orderIdValue' => self::ORDER_ID]);
+
+        self::assertCount(1, $logs);
+        $log = $logs[0];
+        self::assertSame(MockUserContext::MOCK_USER_ID, $log->actorUserId);
+        self::assertSame(
+            ['expectedDeliveryDate' => ['old' => '2026-06-15', 'new' => '2026-07-20']],
+            $log->changes,
+        );
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -166,6 +197,20 @@ final class UpdateOrderDeliveryDateControllerTest extends WebTestCase
     {
         return static::getContainer()->get(OrderRepositoryInterface::class)
             ->findByCompositeKey(self::PARTNER_ID, self::ORDER_ID);
+    }
+
+    /**
+     * @return list<OrderAuditLog>
+     */
+    private static function loadAuditLogs(): array
+    {
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+
+        /** @var list<OrderAuditLog> $logs */
+        $logs = $entityManager->getRepository(OrderAuditLog::class)
+            ->findBy(['partnerId' => self::PARTNER_ID, 'orderIdValue' => self::ORDER_ID]);
+
+        return $logs;
     }
 
     /**
