@@ -1,0 +1,536 @@
+openapi: 3.1.0
+
+info:
+  title: Orders REST API
+  summary: Partner-facing REST API for submitting and updating orders.
+  description: |
+    REST API for partners (shops) to submit orders and update an order's expected
+    delivery date.
+
+    - Composite key `(partnerId, orderId)` is unique; duplicate submissions return `409 Conflict`.
+    - Monetary amounts are decimal strings.
+    - Dates are ISO-8601 (`YYYY-MM-DD`); timestamps are RFC 3339 in UTC.
+    - Errors follow RFC 7807 (`application/problem+json`).
+  version: 1.0.0
+  contact:
+    name: Dmitrij Boldyrev
+    email: dmitrij@boldyrev.cz
+
+servers:
+  - url: http://127.0.0.1:8000
+    description: Local development.
+
+tags:
+  - name: Orders
+    description: Order create and update operations.
+
+paths:
+  /api/v1/partners/{partnerId}/orders:
+    parameters:
+      - $ref: '#/components/parameters/PartnerIdPath'
+    post:
+      operationId: createOrder
+      tags: [Orders]
+      summary: Create an order under a partner.
+      description: |
+        `partnerId` comes from the URL and must not appear in the body.
+        Duplicate `(partnerId, orderId)` returns `409 Conflict`.
+      requestBody:
+        required: true
+        description: The order to create.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+            examples:
+              two-line-order:
+                summary: An order with two product lines.
+                value:
+                  orderId: "ORD-2026-00001"
+                  expectedDeliveryDate: "2026-06-15"
+                  totalValue: "1299.99"
+                  products:
+                    - productId: "SKU-001"
+                      name: "Bluetooth Headphones"
+                      price: "129.99"
+                      quantity: 2
+                    - productId: "SKU-002"
+                      name: "USB-C Cable, 2 m"
+                      price: "9.99"
+                      quantity: 4
+              single-line-order:
+                summary: An order with a single product line.
+                value:
+                  orderId: "ORD-2026-00002"
+                  expectedDeliveryDate: "2026-06-20"
+                  totalValue: "499.00"
+                  products:
+                    - productId: "SKU-005"
+                      name: "Mechanical Keyboard"
+                      price: "499.00"
+                      quantity: 1
+      responses:
+        '201':
+          description: The order has been created.
+          headers:
+            Location:
+              description: URL of the created order.
+              required: true
+              schema:
+                type: string
+                format: uri-reference
+              examples:
+                typical:
+                  value: "/api/v1/partners/PARTNER_A/orders/ORD-2026-00001"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              examples:
+                typical:
+                  value:
+                    partnerId: "PARTNER_A"
+                    orderId: "ORD-2026-00001"
+                    expectedDeliveryDate: "2026-06-15"
+                    totalValue: "1299.99"
+                    products:
+                      - productId: "SKU-001"
+                        name: "Bluetooth Headphones"
+                        price: "129.99"
+                        quantity: 2
+                      - productId: "SKU-002"
+                        name: "USB-C Cable, 2 m"
+                        price: "9.99"
+                        quantity: 4
+                    createdAt: "2026-05-26T10:14:53+00:00"
+                    updatedAt: "2026-05-26T10:14:53+00:00"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/partners/{partnerId}/orders/{orderId}/delivery-date:
+    parameters:
+      - $ref: '#/components/parameters/PartnerIdPath'
+      - $ref: '#/components/parameters/OrderIdPath'
+    put:
+      operationId: updateOrderDeliveryDate
+      tags: [Orders]
+      summary: Replace the expected delivery date of an order.
+      description: Idempotent — the same body produces the same final state.
+      requestBody:
+        required: true
+        description: The new expected delivery date.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrderDeliveryDateRequest'
+            examples:
+              typical:
+                value:
+                  expectedDeliveryDate: "2026-07-01"
+      responses:
+        '200':
+          description: The order has been updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              examples:
+                typical:
+                  value:
+                    partnerId: "PARTNER_A"
+                    orderId: "ORD-2026-00001"
+                    expectedDeliveryDate: "2026-07-01"
+                    totalValue: "1299.99"
+                    products:
+                      - productId: "SKU-001"
+                        name: "Bluetooth Headphones"
+                        price: "129.99"
+                        quantity: 2
+                      - productId: "SKU-002"
+                        name: "USB-C Cable, 2 m"
+                        price: "9.99"
+                        quantity: 4
+                    createdAt: "2026-05-26T10:14:53+00:00"
+                    updatedAt: "2026-05-26T11:42:09+00:00"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  parameters:
+    PartnerIdPath:
+      name: partnerId
+      in: path
+      required: true
+      description: Partner identifier.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
+      examples:
+        typical:
+          value: "PARTNER_A"
+
+    OrderIdPath:
+      name: orderId
+      in: path
+      required: true
+      description: Order identifier, unique within a partner.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
+      examples:
+        typical:
+          value: "ORD-2026-00001"
+
+  schemas:
+    Order:
+      type: object
+      description: A persisted order.
+      properties:
+        partnerId:
+          type: string
+          minLength: 1
+          maxLength: 64
+          examples: ["PARTNER_A"]
+        orderId:
+          type: string
+          minLength: 1
+          maxLength: 64
+          examples: ["ORD-2026-00001"]
+        expectedDeliveryDate:
+          type: string
+          format: date
+          examples: ["2026-06-15"]
+        totalValue:
+          type: string
+          description: Decimal string, up to 12 integer digits and 2 fractional digits.
+          pattern: '^\d{1,12}(\.\d{1,2})?$'
+          examples: ["1299.99", "499.00", "0.01"]
+        products:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OrderProduct'
+        createdAt:
+          type: string
+          format: date-time
+          examples: ["2026-05-26T10:14:53+00:00"]
+        updatedAt:
+          type: string
+          format: date-time
+          examples: ["2026-05-26T11:42:09+00:00"]
+      required:
+        - partnerId
+        - orderId
+        - expectedDeliveryDate
+        - totalValue
+        - products
+        - createdAt
+        - updatedAt
+      additionalProperties: false
+
+    OrderProduct:
+      type: object
+      description: A product line in an order.
+      properties:
+        productId:
+          type: string
+          minLength: 1
+          maxLength: 64
+          examples: ["SKU-001"]
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          examples: ["Bluetooth Headphones"]
+        price:
+          type: string
+          description: Per-unit price as a decimal string.
+          pattern: '^\d{1,12}(\.\d{1,2})?$'
+          examples: ["129.99"]
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+          examples: [2]
+      required: [productId, name, price, quantity]
+      additionalProperties: false
+
+    CreateOrderRequest:
+      type: object
+      description: Body of `POST /api/v1/partners/{partnerId}/orders`.
+      properties:
+        orderId:
+          type: string
+          minLength: 1
+          maxLength: 64
+          examples: ["ORD-2026-00001"]
+        expectedDeliveryDate:
+          type: string
+          format: date
+          examples: ["2026-06-15"]
+        totalValue:
+          type: string
+          pattern: '^\d{1,12}(\.\d{1,2})?$'
+          examples: ["1299.99"]
+        products:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CreateOrderProductRequest'
+      required:
+        - orderId
+        - expectedDeliveryDate
+        - totalValue
+        - products
+      additionalProperties: false
+
+    CreateOrderProductRequest:
+      type: object
+      description: A product line in the create-order body.
+      properties:
+        productId:
+          type: string
+          minLength: 1
+          maxLength: 64
+          examples: ["SKU-001"]
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          examples: ["Bluetooth Headphones"]
+        price:
+          type: string
+          pattern: '^\d{1,12}(\.\d{1,2})?$'
+          examples: ["129.99"]
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+          examples: [2]
+      required: [productId, name, price, quantity]
+      additionalProperties: false
+
+    UpdateOrderDeliveryDateRequest:
+      type: object
+      description: Body of `PUT .../orders/{orderId}/delivery-date`.
+      properties:
+        expectedDeliveryDate:
+          type: string
+          format: date
+          examples: ["2026-07-01"]
+      required: [expectedDeliveryDate]
+      additionalProperties: false
+
+    ProblemDetails:
+      type: object
+      description: RFC 7807 Problem Details response.
+      properties:
+        type:
+          type: string
+          format: uri
+          examples: ["https://api.example.test/problems/validation-failed"]
+        title:
+          type: string
+          examples: ["Validation Failed"]
+        status:
+          type: integer
+          minimum: 100
+          maximum: 599
+          examples: [422]
+        detail:
+          type: string
+          examples: ["One or more fields failed validation."]
+        instance:
+          type: string
+          examples: ["/api/v1/partners/PARTNER_A/orders"]
+      required: [type, title, status]
+      additionalProperties: true
+
+    ValidationProblemDetails:
+      description: ProblemDetails with field-level validation errors.
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetails'
+        - type: object
+          properties:
+            errors:
+              type: array
+              minItems: 1
+              items:
+                type: object
+                properties:
+                  pointer:
+                    type: string
+                    description: JSON Pointer (RFC 6901) into the request body.
+                    examples: ["/products/0/quantity"]
+                  message:
+                    type: string
+                    examples: ["This value should be greater than or equal to 1."]
+                required: [pointer, message]
+                additionalProperties: false
+          required: [errors]
+
+  responses:
+    BadRequest:
+      description: Malformed request body.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            malformed-json:
+              value:
+                type: "https://api.example.test/problems/malformed-json"
+                title: "Malformed JSON"
+                status: 400
+                detail: "The request body could not be parsed as JSON."
+                instance: "/api/v1/partners/PARTNER_A/orders"
+
+    NotFound:
+      description: Order not found.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            order-not-found:
+              value:
+                type: "https://api.example.test/problems/order-not-found"
+                title: "Order Not Found"
+                status: 404
+                detail: "No order exists with partnerId=PARTNER_A and orderId=ORD-9999."
+                instance: "/api/v1/partners/PARTNER_A/orders/ORD-9999/delivery-date"
+
+    MethodNotAllowed:
+      description: HTTP method not allowed on this path.
+      headers:
+        Allow:
+          description: Allowed methods.
+          required: true
+          schema:
+            type: string
+          examples:
+            collection:
+              value: "POST"
+            delivery-date-action:
+              value: "PUT"
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            method-not-allowed:
+              value:
+                type: "https://api.example.test/problems/method-not-allowed"
+                title: "Method Not Allowed"
+                status: 405
+                detail: "The HTTP method DELETE is not allowed on this path."
+                instance: "/api/v1/partners/PARTNER_A/orders"
+
+    Conflict:
+      description: Duplicate `(partnerId, orderId)`.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            duplicate-order:
+              value:
+                type: "https://api.example.test/problems/duplicate-order"
+                title: "Duplicate Order"
+                status: 409
+                detail: "An order with partnerId=PARTNER_A and orderId=ORD-2026-00001 already exists."
+                instance: "/api/v1/partners/PARTNER_A/orders"
+
+    UnsupportedMediaType:
+      description: Unsupported `Content-Type`; use `application/json`.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            unsupported-media-type:
+              value:
+                type: "https://api.example.test/problems/unsupported-media-type"
+                title: "Unsupported Media Type"
+                status: 415
+                detail: "The request Content-Type is not supported. Use application/json."
+                instance: "/api/v1/partners/PARTNER_A/orders"
+
+    UnprocessableEntity:
+      description: Validation failed; see `errors[]`.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ValidationProblemDetails'
+          examples:
+            multiple-field-errors:
+              value:
+                type: "https://api.example.test/problems/validation-failed"
+                title: "Validation Failed"
+                status: 422
+                detail: "One or more fields failed validation."
+                instance: "/api/v1/partners/PARTNER_A/orders"
+                errors:
+                  - pointer: "/products/0/quantity"
+                    message: "This value should be greater than or equal to 1."
+                  - pointer: "/totalValue"
+                    message: "This value is not in the expected format."
+                  - pointer: "/expectedDeliveryDate"
+                    message: "This value is not a valid date."
+            empty-products:
+              value:
+                type: "https://api.example.test/problems/validation-failed"
+                title: "Validation Failed"
+                status: 422
+                detail: "One or more fields failed validation."
+                instance: "/api/v1/partners/PARTNER_A/orders"
+                errors:
+                  - pointer: "/products"
+                    message: "This collection should contain 1 element or more."
+            unknown-field:
+              value:
+                type: "https://api.example.test/problems/validation-failed"
+                title: "Validation Failed"
+                status: 422
+                detail: "One or more fields failed validation."
+                instance: "/api/v1/partners/PARTNER_A/orders"
+                errors:
+                  - pointer: "/currency"
+                    message: "This field was not expected."
+
+    InternalServerError:
+      description: Unexpected server error.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            internal-server-error:
+              value:
+                type: "https://api.example.test/problems/internal-server-error"
+                title: "Internal Server Error"
+                status: 500
+                detail: "An unexpected error occurred. Please contact support if the issue persists."
+                instance: "/api/v1/partners/PARTNER_A/orders"
