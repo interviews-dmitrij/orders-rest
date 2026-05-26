@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\UnsupportedMediaTypeHttpException;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\Validator\ConstraintViolation;
@@ -159,6 +160,20 @@ final class ApiProblemExceptionListenerTest extends TestCase
         self::assertSame('Internal Server Error', $body['title']);
         self::assertSame(500, $body['status']);
         self::assertStringNotContainsString('database connection refused', $body['detail'], 'must not leak raw exception message');
+    }
+
+    public function testForwardsHeadersFromHttpExceptionToProblemResponse(): void
+    {
+        $listener = new ApiProblemExceptionListener(self::PROBLEM_BASE);
+        $exception = new MethodNotAllowedHttpException(['POST']);
+        $event = $this->event('/api/v1/partners/PARTNER_A/orders', $exception);
+
+        $listener->onKernelException($event);
+
+        $response = $event->getResponse();
+        self::assertInstanceOf(JsonResponse::class, $response);
+        self::assertSame(405, $response->getStatusCode());
+        self::assertSame('POST', $response->headers->get('Allow'));
     }
 
     private function event(string $uri, Throwable $exception): ExceptionEvent
