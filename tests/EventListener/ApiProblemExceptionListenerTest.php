@@ -37,17 +37,16 @@ final class ApiProblemExceptionListenerTest extends TestCase
 
     public function testDomainProblemExceptionDictatesStatusTitleAndDetail(): void
     {
-        $body = $this->capture(new DuplicateOrderException('PARTNER_A', 'ORD-001'), '/api/v1/partners/PARTNER_A/orders');
+        $response = $this->dispatch(new DuplicateOrderException('PARTNER_A', 'ORD-001'), '/api/v1/partners/PARTNER_A/orders');
+        $body = self::decode($response);
 
-        self::assertSame(409, $body['__status']);
-        self::assertSame('application/problem+json', $body['__content_type']);
+        self::assertSame(409, $response->getStatusCode());
+        self::assertSame('application/problem+json', $response->headers->get('Content-Type'));
         self::assertArrayNotHasKey('type', $body, 'RFC 7807 type field is intentionally omitted');
         self::assertSame('Duplicate Order', $body['title']);
         self::assertSame(409, $body['status']);
         self::assertSame('/api/v1/partners/PARTNER_A/orders', $body['instance']);
-        $detail = $body['detail'];
-        self::assertIsString($detail);
-        self::assertStringContainsString('already exists', $detail);
+        self::assertStringContainsString('already exists', self::asString($body['detail']));
     }
 
     public function testValidationFailureSurfacesPerFieldErrorsAtFourTwoTwo(): void
@@ -57,10 +56,10 @@ final class ApiProblemExceptionListenerTest extends TestCase
             self::violation('This collection should contain 1 element or more.', 'products'),
         ]));
 
-        $body = $this->capture($exception, '/api/v1/partners/PARTNER_A/orders');
+        $body = self::decode($this->dispatch($exception, '/api/v1/partners/PARTNER_A/orders'));
 
-        self::assertSame(422, $body['__status']);
         self::assertSame('Validation Failed', $body['title']);
+        self::assertSame(422, $body['status']);
         self::assertSame(
             [
                 ['pointer' => '/orderId', 'message' => 'This value should not be blank.'],
@@ -83,9 +82,8 @@ final class ApiProblemExceptionListenerTest extends TestCase
         ]));
         $outer = new HttpException(422, 'Validation failed', $inner);
 
-        $body = $this->capture($outer, '/api/v1/partners/PARTNER_A/orders');
+        $body = self::decode($this->dispatch($outer, '/api/v1/partners/PARTNER_A/orders'));
 
-        self::assertSame(422, $body['__status']);
         self::assertSame('Validation Failed', $body['title']);
         self::assertSame(
             [['pointer' => '/orderId', 'message' => 'This value should not be blank.']],
@@ -109,12 +107,11 @@ final class ApiProblemExceptionListenerTest extends TestCase
     #[DataProvider('symfonyPropertyPathToJsonPointerScenarios')]
     public function testConvertsSymfonyPropertyPathToRfc6901JsonPointer(string $propertyPath, string $expectedPointer): void
     {
-        $body = $this->capture(
-            new ValidationFailedException('dto', new ConstraintViolationList([
-                self::violation('msg', $propertyPath),
-            ])),
-            '/api/v1/x',
-        );
+        $exception = new ValidationFailedException('dto', new ConstraintViolationList([
+            self::violation('msg', $propertyPath),
+        ]));
+
+        $body = self::decode($this->dispatch($exception, '/api/v1/x'));
 
         self::assertSame([['pointer' => $expectedPointer, 'message' => 'msg']], $body['errors']);
     }
@@ -136,71 +133,54 @@ final class ApiProblemExceptionListenerTest extends TestCase
         int $expectedStatus,
         string $expectedTitle,
     ): void {
-        $body = $this->capture($exception, '/api/v1/partners/PARTNER_A/orders');
+        $response = $this->dispatch($exception, '/api/v1/partners/PARTNER_A/orders');
+        $body = self::decode($response);
 
-        self::assertSame($expectedStatus, $body['__status']);
+        self::assertSame($expectedStatus, $response->getStatusCode());
         self::assertSame($expectedTitle, $body['title']);
         self::assertSame($expectedStatus, $body['status']);
     }
 
     public function testForwardsHttpExceptionResponseHeaders(): void
     {
-        $event = $this->event('/api/v1/partners/PARTNER_A/orders', new MethodNotAllowedHttpException(['POST']));
+        $response = $this->dispatch(
+            new MethodNotAllowedHttpException(['POST']),
+            '/api/v1/partners/PARTNER_A/orders',
+        );
 
-        $this->listener->onKernelException($event);
-
-        $response = $event->getResponse();
-        self::assertInstanceOf(JsonResponse::class, $response);
         self::assertSame(405, $response->getStatusCode());
-        self::assertSame('POST', $response->headers->get('Allow'), 'Allow must propagate to support RFC 9110 §15.5.6');
+        self::assertSame('POST', $response->headers->get('Allow'), 'Allow must propagate per RFC 9110 §15.5.6');
     }
 
     public function testUnknownThrowableDegradesToSafeFiveHundredWithoutLeakingDetail(): void
     {
-        $body = $this->capture(
+        $body = self::decode($this->dispatch(
             new RuntimeException('database connection refused at host db.internal'),
             '/api/v1/partners/PARTNER_A/orders',
-        );
+        ));
 
-        self::assertSame(500, $body['__status']);
         self::assertSame('Internal Server Error', $body['title']);
-        $detail = $body['detail'];
-        self::assertIsString($detail);
+        self::assertSame(500, $body['status']);
+        $detail = self::asString($body['detail']);
         self::assertStringNotContainsString('database', $detail);
         self::assertStringNotContainsString('db.internal', $detail);
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function capture(Throwable $exception, string $uri): array
+    private function dispatch(Throwable $exception, string $uri): JsonResponse
     {
-        $event = $this->event($uri, $exception);
-
-        $this->listener->onKernelException($event);
-
-        $response = $event->getResponse();
-        self::assertInstanceOf(JsonResponse::class, $response);
-
-        $content = $response->getContent();
-        self::assertIsString($content);
-
-        /** @var array<string, mixed> $decoded */
-        $decoded = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
-        $decoded['__status'] = $response->getStatusCode();
-        $decoded['__content_type'] = $response->headers->get('Content-Type');
-
-        return $decoded;
-    }
-
-    private function event(string $uri, Throwable $exception): ExceptionEvent
-    {
-        return new ExceptionEvent(
+        $event = new ExceptionEvent(
             self::createStub(HttpKernelInterface::class),
             Request::create($uri),
             HttpKernelInterface::MAIN_REQUEST,
             $exception,
         );
+
+        $this->listener->onKernelException($event);
+
+        $response = $event->getResponse();
+        self::assertInstanceOf(JsonResponse::class, $response);
+
+        return $response;
     }
 
     private static function violation(string $message, string $propertyPath): ConstraintViolation
@@ -213,5 +193,26 @@ final class ApiProblemExceptionListenerTest extends TestCase
             propertyPath: $propertyPath,
             invalidValue: null,
         );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function decode(JsonResponse $response): array
+    {
+        $content = $response->getContent();
+        self::assertIsString($content);
+
+        /** @var array<string, mixed> $decoded */
+        $decoded = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
+
+        return $decoded;
+    }
+
+    private static function asString(mixed $value): string
+    {
+        self::assertIsString($value);
+
+        return $value;
     }
 }
