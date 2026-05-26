@@ -6,6 +6,7 @@ namespace App\Tests\Serializer;
 
 use App\Serializer\BigDecimalNormalizer;
 use Brick\Math\BigDecimal;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 use Symfony\Component\Serializer\Exception\NotNormalizableValueException;
@@ -62,16 +63,27 @@ final class BigDecimalNormalizerTest extends TestCase
         $this->normalizer->denormalize('not-a-decimal', BigDecimal::class);
     }
 
-    public function testDenormalizationThrowsWhenInputHasMoreThanTwoFractionalDigits(): void
+    /**
+     * @return iterable<string, array{0: mixed, 1: string}>
+     */
+    public static function rejectedInputsWithExpectedMessage(): iterable
     {
-        $this->expectException(NotNormalizableValueException::class);
-        $this->normalizer->denormalize('1.234', BigDecimal::class);
+        yield 'more than two fractional digits' => ['1.234', 'more than 2 fractional digits'];
+        yield 'array input' => [['nested' => 'object'], 'numeric string or integer'];
+        yield 'float input' => [1.5, 'numeric string or integer'];
+        yield 'boolean input' => [true, 'numeric string or integer'];
+        yield 'negative decimal string' => ['-5.00', 'must not be negative'];
+        yield 'negative integer string' => ['-7', 'must not be negative'];
+        yield 'negative integer' => [-5, 'must not be negative'];
     }
 
-    public function testDenormalizationRejectsNonScalarInput(): void
+    #[DataProvider('rejectedInputsWithExpectedMessage')]
+    public function testDenormalizationRejectsInputWithExpectedMessage(mixed $input, string $messageFragment): void
     {
         $this->expectException(NotNormalizableValueException::class);
-        $this->normalizer->denormalize(['nested' => 'object'], BigDecimal::class);
+        $this->expectExceptionMessage($messageFragment);
+
+        $this->normalizer->denormalize($input, BigDecimal::class);
     }
 
     public function testSupportsDenormalizationForBigDecimal(): void
