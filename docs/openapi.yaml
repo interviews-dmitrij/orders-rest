@@ -69,16 +69,6 @@ paths:
       responses:
         '201':
           description: The order has been created.
-          headers:
-            Location:
-              description: URL of the created order.
-              required: true
-              schema:
-                type: string
-                format: uri-reference
-              examples:
-                typical:
-                  value: "/api/v1/partners/PARTNER_A/orders/ORD-2026-00001"
           content:
             application/json:
               schema:
@@ -103,6 +93,8 @@ paths:
                     updatedAt: "2026-05-26T10:14:53+00:00"
         '400':
           $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '405':
           $ref: '#/components/responses/MethodNotAllowed'
         '409':
@@ -221,8 +213,8 @@ components:
           examples: ["2026-06-15"]
         totalValue:
           type: string
-          description: Decimal string, up to 12 integer digits and 2 fractional digits.
-          pattern: '^\d{1,12}(\.\d{1,2})?$'
+          description: Non-negative decimal string, at most 5 fractional digits. Stored as sent — no rounding applied.
+          pattern: '^\d+(\.\d{1,5})?$'
           examples: ["1299.99", "499.00", "0.01"]
         products:
           type: array
@@ -264,7 +256,7 @@ components:
         price:
           type: string
           description: Per-unit price as a decimal string.
-          pattern: '^\d{1,12}(\.\d{1,2})?$'
+          pattern: '^\d+(\.\d{1,5})?$'
           examples: ["129.99"]
         quantity:
           type: integer
@@ -289,7 +281,7 @@ components:
           examples: ["2026-06-15"]
         totalValue:
           type: string
-          pattern: '^\d{1,12}(\.\d{1,2})?$'
+          pattern: '^\d+(\.\d{1,5})?$'
           examples: ["1299.99"]
         products:
           type: array
@@ -318,7 +310,7 @@ components:
           examples: ["Bluetooth Headphones"]
         price:
           type: string
-          pattern: '^\d{1,12}(\.\d{1,2})?$'
+          pattern: '^\d+(\.\d{1,5})?$'
           examples: ["129.99"]
         quantity:
           type: integer
@@ -341,10 +333,6 @@ components:
       type: object
       description: RFC 7807 Problem Details response.
       properties:
-        type:
-          type: string
-          format: uri
-          examples: ["https://api.example.test/problems/validation-failed"]
         title:
           type: string
           examples: ["Validation Failed"]
@@ -359,7 +347,7 @@ components:
         instance:
           type: string
           examples: ["/api/v1/partners/PARTNER_A/orders"]
-      required: [type, title, status]
+      required: [title, status]
       additionalProperties: true
 
     ValidationProblemDetails:
@@ -395,7 +383,6 @@ components:
           examples:
             malformed-json:
               value:
-                type: "https://api.example.test/problems/malformed-json"
                 title: "Malformed JSON"
                 status: 400
                 detail: "The request body could not be parsed as JSON."
@@ -410,7 +397,6 @@ components:
           examples:
             order-not-found:
               value:
-                type: "https://api.example.test/problems/order-not-found"
                 title: "Order Not Found"
                 status: 404
                 detail: "No order exists with partnerId=PARTNER_A and orderId=ORD-9999."
@@ -436,7 +422,6 @@ components:
           examples:
             method-not-allowed:
               value:
-                type: "https://api.example.test/problems/method-not-allowed"
                 title: "Method Not Allowed"
                 status: 405
                 detail: "The HTTP method DELETE is not allowed on this path."
@@ -451,7 +436,6 @@ components:
           examples:
             duplicate-order:
               value:
-                type: "https://api.example.test/problems/duplicate-order"
                 title: "Duplicate Order"
                 status: 409
                 detail: "An order with partnerId=PARTNER_A and orderId=ORD-2026-00001 already exists."
@@ -466,7 +450,6 @@ components:
           examples:
             unsupported-media-type:
               value:
-                type: "https://api.example.test/problems/unsupported-media-type"
                 title: "Unsupported Media Type"
                 status: 415
                 detail: "The request Content-Type is not supported. Use application/json."
@@ -481,7 +464,6 @@ components:
           examples:
             multiple-field-errors:
               value:
-                type: "https://api.example.test/problems/validation-failed"
                 title: "Validation Failed"
                 status: 422
                 detail: "One or more fields failed validation."
@@ -490,12 +472,11 @@ components:
                   - pointer: "/products/0/quantity"
                     message: "This value should be greater than or equal to 1."
                   - pointer: "/totalValue"
-                    message: "This value is not in the expected format."
+                    message: "This value should be greater than or equal to 0."
                   - pointer: "/expectedDeliveryDate"
                     message: "This value is not a valid date."
             empty-products:
               value:
-                type: "https://api.example.test/problems/validation-failed"
                 title: "Validation Failed"
                 status: 422
                 detail: "One or more fields failed validation."
@@ -513,7 +494,6 @@ components:
           examples:
             internal-server-error:
               value:
-                type: "https://api.example.test/problems/internal-server-error"
                 title: "Internal Server Error"
                 status: 500
                 detail: "An unexpected error occurred. Please contact support if the issue persists."
