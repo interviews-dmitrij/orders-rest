@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\OrderAuditEventType;
 use App\Repository\DoctrineOrderAuditLogRepository;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
@@ -28,8 +29,8 @@ final class OrderAuditLog
     #[ORM\Column(type: 'string', length: 64)]
     public private(set) string $orderIdValue;
 
-    #[ORM\Column(type: 'string', length: 64)]
-    public private(set) string $eventType;
+    #[ORM\Column(type: 'string', length: 64, enumType: OrderAuditEventType::class)]
+    public private(set) OrderAuditEventType $eventType;
 
     /** @var array<string, array{old: mixed, new: mixed}> */
     #[ORM\Column(type: 'json')]
@@ -48,7 +49,7 @@ final class OrderAuditLog
         Uuid $orderId,
         string $partnerId,
         string $orderIdValue,
-        string $eventType,
+        OrderAuditEventType $eventType,
         array $changes,
         string $actorUserId,
         DateTimeImmutable $occurredAt,

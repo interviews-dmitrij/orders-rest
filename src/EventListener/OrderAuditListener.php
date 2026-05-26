@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventListener;
 
 use App\Entity\OrderAuditLog;
+use App\Enum\OrderAuditEventType;
 use App\Event\OrderDeliveryDateChangedEvent;
 use App\Repository\OrderAuditLogRepositoryInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
@@ -23,7 +24,7 @@ final class OrderAuditListener
             orderId: $event->orderId,
             partnerId: $event->partnerId,
             orderIdValue: $event->orderIdValue,
-            eventType: 'delivery_date_changed',
+            eventType: OrderAuditEventType::DeliveryDateChanged,
             changes: [
                 'expectedDeliveryDate' => [
                     'old' => $event->previousDeliveryDate->format('Y-m-d'),

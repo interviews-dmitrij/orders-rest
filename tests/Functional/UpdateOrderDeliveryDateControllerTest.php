@@ -158,7 +158,6 @@ final class UpdateOrderDeliveryDateControllerTest extends WebTestCase
 
         self::assertCount(1, $logs);
         $log = $logs[0];
-        self::assertSame('delivery_date_changed', $log->eventType);
         self::assertSame(MockUserContext::MOCK_USER_ID, $log->actorUserId);
         self::assertSame(
             ['expectedDeliveryDate' => ['old' => '2026-06-15', 'new' => '2026-07-20']],

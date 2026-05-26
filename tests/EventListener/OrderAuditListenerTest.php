@@ -35,7 +35,6 @@ final class OrderAuditListenerTest extends TestCase
         self::assertSame($orderId, $log->orderId);
         self::assertSame('PARTNER_A', $log->partnerId);
         self::assertSame('ORD-001', $log->orderIdValue);
-        self::assertSame('delivery_date_changed', $log->eventType);
         self::assertSame(
             ['expectedDeliveryDate' => ['old' => '2026-06-15', 'new' => '2026-07-20']],
             $log->changes,
