@@ -32,7 +32,7 @@ final class UpdateOrderDeliveryDateHandlerTest extends TestCase
     public function testReplacesExpectedDeliveryDateAndStampsUpdatedAtFromClock(): void
     {
         $seeded = $this->seedOrder();
-        $request = new UpdateOrderDeliveryDateRequest('2026-07-20');
+        $request = new UpdateOrderDeliveryDateRequest(new DateTimeImmutable('2026-07-20'));
 
         $updated = $this->handler->update('PARTNER_A', 'ORD-001', $request);
 
@@ -44,7 +44,7 @@ final class UpdateOrderDeliveryDateHandlerTest extends TestCase
 
     public function testRejectsLookupWhenOrderDoesNotExist(): void
     {
-        $request = new UpdateOrderDeliveryDateRequest('2026-07-20');
+        $request = new UpdateOrderDeliveryDateRequest(new DateTimeImmutable('2026-07-20'));
 
         $this->expectException(OrderNotFoundException::class);
 
@@ -59,7 +59,7 @@ final class UpdateOrderDeliveryDateHandlerTest extends TestCase
     public function testRejectsCrossPartnerLookup(): void
     {
         $this->seedOrder();
-        $request = new UpdateOrderDeliveryDateRequest('2026-07-20');
+        $request = new UpdateOrderDeliveryDateRequest(new DateTimeImmutable('2026-07-20'));
 
         $this->expectException(OrderNotFoundException::class);
 
@@ -69,7 +69,7 @@ final class UpdateOrderDeliveryDateHandlerTest extends TestCase
     public function testRepeatedUpdatesAdvanceUpdatedAtWhileConvergingOnTheSameFinalDate(): void
     {
         $this->seedOrder();
-        $request = new UpdateOrderDeliveryDateRequest('2026-07-20');
+        $request = new UpdateOrderDeliveryDateRequest(new DateTimeImmutable('2026-07-20'));
 
         $first = $this->handler->update('PARTNER_A', 'ORD-001', $request);
         $firstUpdatedAt = $first->updatedAt;
