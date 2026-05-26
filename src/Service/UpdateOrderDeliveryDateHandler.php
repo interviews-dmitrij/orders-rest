@@ -8,12 +8,13 @@ use App\Dto\Request\UpdateOrderDeliveryDateRequest;
 use App\Entity\Order;
 use App\Exception\OrderNotFoundException;
 use App\Repository\OrderRepositoryInterface;
-use DateTimeImmutable;
+use Psr\Clock\ClockInterface;
 
 final class UpdateOrderDeliveryDateHandler
 {
     public function __construct(
         private readonly OrderRepositoryInterface $orderRepository,
+        private readonly ClockInterface $clock,
     ) {
     }
 
@@ -27,7 +28,7 @@ final class UpdateOrderDeliveryDateHandler
             throw new OrderNotFoundException($partnerId, $orderId);
         }
 
-        $order->changeExpectedDeliveryDate($request->expectedDeliveryDate, new DateTimeImmutable());
+        $order->changeExpectedDeliveryDate($request->expectedDeliveryDate, $this->clock->now());
         $this->orderRepository->save($order);
 
         return $order;

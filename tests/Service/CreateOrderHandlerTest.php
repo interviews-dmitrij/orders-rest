@@ -12,16 +12,19 @@ use App\Tests\Repository\InMemoryOrderRepository;
 use Brick\Math\BigDecimal;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Clock\MockClock;
 
 final class CreateOrderHandlerTest extends TestCase
 {
     private InMemoryOrderRepository $repository;
+    private MockClock $clock;
     private CreateOrderHandler $handler;
 
     protected function setUp(): void
     {
         $this->repository = new InMemoryOrderRepository();
-        $this->handler = new CreateOrderHandler($this->repository);
+        $this->clock = new MockClock('2026-05-26T10:00:00+00:00');
+        $this->handler = new CreateOrderHandler($this->repository, $this->clock);
     }
 
     public function testCreatedOrderEchoesRequestAndIsPersistedUnderCompositeKey(): void
@@ -36,6 +39,7 @@ final class CreateOrderHandlerTest extends TestCase
         self::assertSame('ORD-001', $order->orderId);
         self::assertSame('2026-06-15', $order->expectedDeliveryDate->format('Y-m-d'));
         self::assertSame('499.00', (string) $order->totalValue);
+        self::assertEquals($this->clock->now(), $order->createdAt, 'createdAt must come from the injected clock');
         self::assertSame($order->createdAt, $order->updatedAt, 'fresh order must have equal create/update timestamps');
         self::assertSame($order, $this->repository->findByCompositeKey('PARTNER_A', 'ORD-001'));
     }
