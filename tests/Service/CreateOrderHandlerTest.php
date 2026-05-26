@@ -10,7 +10,6 @@ use App\Exception\DuplicateOrderException;
 use App\Service\CreateOrderHandler;
 use App\Tests\Repository\InMemoryOrderRepository;
 use Brick\Math\BigDecimal;
-use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 
@@ -114,7 +113,7 @@ final class CreateOrderHandlerTest extends TestCase
     {
         return new CreateOrderRequest(
             orderId: $orderId,
-            expectedDeliveryDate: new DateTimeImmutable('2026-06-15'),
+            expectedDeliveryDate: '2026-06-15',
             totalValue: BigDecimal::of($totalValue),
             products: array_map(
                 static fn (array $line): CreateOrderProductRequest => new CreateOrderProductRequest(

@@ -9,6 +9,7 @@ use App\Entity\Order;
 use App\Entity\OrderProduct;
 use App\Exception\DuplicateOrderException;
 use App\Repository\OrderRepositoryInterface;
+use DateTimeImmutable;
 use Psr\Clock\ClockInterface;
 
 final class CreateOrderHandler
@@ -31,7 +32,7 @@ final class CreateOrderHandler
         $order = new Order(
             partnerId: $partnerId,
             orderId: $request->orderId,
-            expectedDeliveryDate: $request->expectedDeliveryDate,
+            expectedDeliveryDate: new DateTimeImmutable($request->expectedDeliveryDate),
             totalValue: $request->totalValue,
             createdAt: $this->clock->now(),
         );
