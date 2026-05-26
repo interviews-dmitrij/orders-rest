@@ -9,6 +9,7 @@ use App\Dto\Request\CreateOrderRequest;
 use App\Exception\DuplicateOrderException;
 use App\Service\OrderCreator;
 use App\Tests\Repository\InMemoryOrderRepository;
+use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
 final class OrderCreatorTest extends TestCase
@@ -19,7 +20,7 @@ final class OrderCreatorTest extends TestCase
         $creator = new OrderCreator($repository);
         $request = new CreateOrderRequest(
             orderId: 'ORD-2026-00001',
-            expectedDeliveryDate: '2026-06-15',
+            expectedDeliveryDate: new DateTimeImmutable('2026-06-15'),
             totalValue: '499.00',
             products: [
                 new CreateOrderProductRequest(
@@ -47,7 +48,7 @@ final class OrderCreatorTest extends TestCase
         $creator = new OrderCreator(new InMemoryOrderRepository());
         $request = new CreateOrderRequest(
             orderId: 'ORD-2026-00002',
-            expectedDeliveryDate: '2026-06-20',
+            expectedDeliveryDate: new DateTimeImmutable('2026-06-20'),
             totalValue: '1299.99',
             products: [
                 new CreateOrderProductRequest('SKU-001', 'Bluetooth Headphones', '129.99', 2),
@@ -81,7 +82,7 @@ final class OrderCreatorTest extends TestCase
         $creator = new OrderCreator(new InMemoryOrderRepository());
         $request = new CreateOrderRequest(
             orderId: 'ORD-DUP',
-            expectedDeliveryDate: '2026-06-15',
+            expectedDeliveryDate: new DateTimeImmutable('2026-06-15'),
             totalValue: '100.00',
             products: [new CreateOrderProductRequest('SKU-1', 'Item', '100.00', 1)],
         );
@@ -96,7 +97,7 @@ final class OrderCreatorTest extends TestCase
         $creator = new OrderCreator(new InMemoryOrderRepository());
         $request = new CreateOrderRequest(
             orderId: 'ORD-SCALE',
-            expectedDeliveryDate: '2026-06-15',
+            expectedDeliveryDate: new DateTimeImmutable('2026-06-15'),
             totalValue: '499',
             products: [new CreateOrderProductRequest('SKU-1', 'Item', '9.9', 1)],
         );

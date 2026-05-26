@@ -11,7 +11,6 @@ use App\Exception\DuplicateOrderException;
 use App\Repository\OrderRepositoryInterface;
 use Brick\Math\BigDecimal;
 use DateTimeImmutable;
-use LogicException;
 
 final class OrderCreator
 {
@@ -25,20 +24,12 @@ final class OrderCreator
      */
     public function create(string $partnerId, CreateOrderRequest $request): Order
     {
-        $expectedDeliveryDate = DateTimeImmutable::createFromFormat('!Y-m-d', $request->expectedDeliveryDate);
-        if (false === $expectedDeliveryDate) {
-            throw new LogicException(\sprintf(
-                'expectedDeliveryDate "%s" passed Assert\\Date but failed parsing.',
-                $request->expectedDeliveryDate,
-            ));
-        }
-
         $totalValue = BigDecimal::of($request->totalValue)->toScale(2);
 
         $order = new Order(
             partnerId: $partnerId,
             orderId: $request->orderId,
-            expectedDeliveryDate: $expectedDeliveryDate,
+            expectedDeliveryDate: $request->expectedDeliveryDate,
             totalValue: $totalValue,
             createdAt: new DateTimeImmutable(),
         );
